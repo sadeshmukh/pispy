@@ -1,6 +1,16 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 
+type CachetUser = {
+  type: 'user';
+  id: string;
+  userId: string;
+  displayName: string;
+  pronouns: string | null;
+  imageUrl: string | null;
+  expiration: string;
+};
+
 export const GET: APIRoute = async ({ url, redirect, cookies }) => {
   const code = url.searchParams.get('code');
   if (!code) return redirect('/?error=no_code');
@@ -40,8 +50,11 @@ export const GET: APIRoute = async ({ url, redirect, cookies }) => {
   try {
     const r = await fetch(`https://cachet.hackclub.com/users/${slackId}`);
     if (r.ok) {
-      const d = await r.json();
-      avatar_url = d.image ?? d.avatar ?? d.avatar_url ?? d.image_url ?? null;
+      const d = (await r.json()) as Partial<CachetUser>;
+      avatar_url =
+        d.type === 'user' && d.userId === slackId && typeof d.imageUrl === 'string'
+          ? d.imageUrl
+          : null;
     }
   } catch {}
 
