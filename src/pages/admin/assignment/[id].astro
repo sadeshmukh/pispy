@@ -4,16 +4,11 @@ import {
   getAssignment,
   getTargetClues,
   getReleasedFieldIds,
-  syncClueReleases,
-  expectedReleaseCount,
 } from '../../../lib/hunt';
 
 const id = parseInt(Astro.params.id!);
 const assignment = id ? await getAssignment(id) : null;
 if (!assignment) return Astro.redirect('/admin/assignments');
-
-// Keep the time-based drip current before we render the picture.
-await syncClueReleases(assignment);
 
 const { rows: names } = await db.execute({
   sql: `SELECT
@@ -27,13 +22,13 @@ const targetName = names[0]?.target_name as string;
 const clues = await getTargetClues(assignment.target_id);
 const released = await getReleasedFieldIds(assignment.id);
 
-const expected = assignment.started_at
-  ? Math.min(clues.length, expectedReleaseCount(assignment.started_at))
-  : 0;
-
 const startedLabel = assignment.started_at
   ? new Date(assignment.started_at * 1000).toLocaleString()
   : null;
+const submittedLabel = assignment.submitted_at
+  ? new Date(assignment.submitted_at * 1000).toLocaleString()
+  : null;
+const cb = Date.now();
 ---
 
 <!doctype html>
@@ -52,13 +47,67 @@ const startedLabel = assignment.started_at
       </nav>
 
       <header>
-        <h1>{hunterName} <span class="arrow">hunting</span> {targetName}</h1>
+        <h1>{hunterName} → {targetName}</h1>
         <p class="meta">
           status: <span class={`status-${assignment.status}`}>{assignment.status}</span>
           {startedLabel && <> · started {startedLabel}</>}
-          · {released.size}/{clues.length} clues out
+          · {released.size}/{clues.length} clues revealed
+          {assignment.score !== null && <> · {assignment.score} pts</>}
         </p>
       </header>
+
+      {assignment.status === 'submitted' && (
+        <section class="review">
+          <p class="section-label">submission to review</p>
+          <p class="review-meta">
+            submitted {submittedLabel} · worth {assignment.score} pts if confirmed
+          </p>
+          <div class="photos">
+            <div class="photo-wrap">
+              <p class="photo-label">submitted photo</p>
+              <img src={`/api/captures/${assignment.id}?cb=${cb}`} alt="submitted photo" class="photo" />
+            </div>
+            <div class="photo-wrap">
+              <p class="photo-label">target — face</p>
+              <img src={`/api/photos/${assignment.target_id}/face?cb=${cb}`} alt="target face" class="photo" />
+            </div>
+            <div class="photo-wrap">
+              <p class="photo-label">target — badge</p>
+              <img src={`/api/photos/${assignment.target_id}/badge?cb=${cb}`} alt="target badge" class="photo" />
+            </div>
+          </div>
+          <div class="review-actions">
+            <form action="/api/admin/assignments" method="POST">
+              <input type="hidden" name="action" value="approve_capture" />
+              <input type="hidden" name="id" value={assignment.id} />
+              <button type="submit" class="btn-approve">confirm find — award {assignment.score} pts</button>
+            </form>
+            <form action="/api/admin/assignments" method="POST" class="reject-form">
+              <input type="hidden" name="action" value="reject_capture" />
+              <input type="hidden" name="id" value={assignment.id} />
+              <textarea name="note" placeholder="reason (optional)" rows="2"></textarea>
+              <button type="submit" class="btn-reject">reject</button>
+            </form>
+          </div>
+        </section>
+      )}
+
+      {assignment.status === 'completed' && (
+        <section class="review">
+          <p class="section-label">confirmed find</p>
+          <p class="review-meta">{assignment.score} pts awarded · submitted {submittedLabel}</p>
+          <div class="photos">
+            <div class="photo-wrap">
+              <p class="photo-label">submitted photo</p>
+              <img src={`/api/captures/${assignment.id}?cb=${cb}`} alt="submitted photo" class="photo" />
+            </div>
+            <div class="photo-wrap">
+              <p class="photo-label">target — face</p>
+              <img src={`/api/photos/${assignment.target_id}/face?cb=${cb}`} alt="target face" class="photo" />
+            </div>
+          </div>
+        </section>
+      )}
 
       {assignment.status === 'assigned' && (
         <form action="/api/admin/assignments" method="POST" class="start-form">
@@ -83,18 +132,17 @@ const startedLabel = assignment.started_at
         <form action="/api/admin/assignments" method="POST">
           <input type="hidden" name="action" value="reset_clues" />
           <input type="hidden" name="id" value={assignment.id} />
-          <button type="submit" class="btn-delete">reset</button>
+          <button type="submit" class="btn-delete">reset clues</button>
         </form>
       </div>
 
-      <p class="section-label">clues available to the hunter</p>
+      <p class="section-label">clues</p>
       {clues.length === 0 ? (
         <p class="empty">the target hasn't answered any clue fields yet.</p>
       ) : (
         <div class="clues">
-          {clues.map((c, i) => {
+          {clues.map(c => {
             const isReleased = released.has(c.id);
-            const dueByTime = i < expected;
             return (
               <div class={`clue ${isReleased ? 'on' : 'off'}`}>
                 <span class="dot" />
@@ -103,7 +151,6 @@ const startedLabel = assignment.started_at
                   <span class="clue-answer">{c.answer}</span>
                 </div>
                 <div class="clue-action">
-                  {!isReleased && dueByTime && <span class="due">due</span>}
                   <form action="/api/admin/assignments" method="POST">
                     <input type="hidden" name="action" value={isReleased ? 'revoke_clue' : 'release_clue'} />
                     <input type="hidden" name="id" value={assignment.id} />
@@ -124,39 +171,74 @@ const startedLabel = assignment.started_at
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
   .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
   nav {
     display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
     padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem; font-style: italic;
+    font-size: 0.85rem;
   }
-  nav a { color: #666; text-decoration: none; }
+  nav a { color: #888; text-decoration: none; }
   nav a:hover { color: #ccc; }
   nav .logout { margin-left: auto; }
 
   header { margin-bottom: 1.75rem; }
-  h1 { font-size: 1.15rem; font-weight: normal; font-style: italic; color: #ddd; margin-bottom: 0.4rem; }
-  .arrow { color: #555; font-size: 0.85rem; }
-  .meta { font-size: 0.78rem; color: #555; font-style: italic; }
-  .status-assigned { color: #7a7a4a; }
-  .status-active { color: #5a7a8a; }
-  .status-completed { color: #5a7a5a; }
+  h1 { font-size: 1.15rem; font-weight: 600; color: #ddd; margin-bottom: 0.4rem; }
+  .meta { font-size: 0.8rem; color: #888; }
+  .status-assigned { color: #b3b35a; }
+  .status-active { color: #6a9aba; }
+  .status-submitted { color: #c08a4a; }
+  .status-completed { color: #6a9a6a; }
+
+  section.review {
+    margin-bottom: 2rem; padding: 1.25rem; border: 1px solid #2a2a2a;
+    border-radius: 6px; background: #161616;
+  }
+  .review-meta { font-size: 0.8rem; color: #888; margin-bottom: 1rem; }
+  .photos { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+  .photo-label { font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: #888; margin-bottom: 0.4rem; }
+  .photo {
+    width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
+    background: #111; border: 1px solid #2a2a2a; border-radius: 4px;
+  }
+  .review-actions { display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap; }
+  .reject-form { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 200px; }
+  textarea {
+    background: #111; border: 1px solid #2a2a2a; color: #ccc;
+    font-family: inherit; font-size: 0.85rem; padding: 0.5rem 0.65rem;
+    resize: vertical; outline: none; border-radius: 4px;
+  }
+  textarea:focus { border-color: #555; }
+
+  .btn-approve {
+    background: none; border: 1px solid #3a5a3a; color: #7aaa7a;
+    font-family: inherit; font-size: 0.85rem;
+    padding: 0.5rem 1.25rem; cursor: pointer; white-space: nowrap; border-radius: 4px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-approve:hover { border-color: #5a8a5a; color: #9aca9a; }
+  .btn-reject {
+    background: none; border: 1px solid #5a3a3a; color: #aa6a6a;
+    font-family: inherit; font-size: 0.85rem;
+    padding: 0.45rem 1rem; cursor: pointer; border-radius: 4px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-reject:hover { border-color: #8a4a4a; color: #ca8a8a; }
 
   .start-form { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.75rem; }
   .btn-start {
     background: none; border: 1px solid #444; color: #ccc;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
-    padding: 0.45rem 1.25rem; cursor: pointer;
+    font-family: inherit; font-size: 0.85rem;
+    padding: 0.45rem 1.25rem; cursor: pointer; border-radius: 4px;
     transition: color 0.2s, border-color 0.2s;
   }
   .btn-start:hover { color: #fff; border-color: #888; }
-  .hint { font-size: 0.75rem; color: #555; font-style: italic; }
+  .hint { font-size: 0.78rem; color: #777; }
 
   .bulk { display: flex; gap: 1.5rem; margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 1px solid #1e1e1e; }
 
-  .section-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 1rem; }
-  .empty { font-size: 0.9rem; font-style: italic; color: #444; }
+  .section-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #777; margin-bottom: 1rem; }
+  .empty { font-size: 0.9rem; color: #666; }
 
   .clues { display: flex; flex-direction: column; }
   .clue {
@@ -164,23 +246,22 @@ const startedLabel = assignment.started_at
     padding: 0.85rem 0; border-top: 1px solid #1a1a1a;
   }
   .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-  .clue.on .dot { background: #5a7a5a; }
+  .clue.on .dot { background: #6a9a6a; }
   .clue.off .dot { background: #333; }
-  .clue.off .clue-answer { color: #555; }
+  .clue.off .clue-answer { color: #666; }
   .clue-body { flex: 1; }
-  .clue-prompt { display: block; font-size: 0.72rem; color: #666; font-style: italic; margin-bottom: 0.25rem; }
+  .clue-prompt { display: block; font-size: 0.72rem; color: #888; margin-bottom: 0.25rem; }
   .clue-answer { display: block; font-size: 0.9rem; color: #ccc; }
   .clue-action { display: flex; align-items: center; gap: 0.75rem; }
-  .due { font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: #7a7a4a; }
 
   .btn-ghost {
-    background: none; border: none; color: #888; font-family: Georgia, serif;
-    font-size: 0.8rem; font-style: italic; cursor: pointer; padding: 0;
+    background: none; border: none; color: #999; font-family: inherit;
+    font-size: 0.82rem; cursor: pointer; padding: 0;
   }
   .btn-ghost:hover { color: #ccc; }
   .btn-delete {
-    background: none; border: none; color: #5a3a3a; font-family: Georgia, serif;
-    font-size: 0.8rem; font-style: italic; cursor: pointer; padding: 0;
+    background: none; border: none; color: #aa6a6a; font-family: inherit;
+    font-size: 0.82rem; cursor: pointer; padding: 0;
   }
-  .btn-delete:hover { color: #aa6a6a; }
+  .btn-delete:hover { color: #ca8a8a; }
 </style>

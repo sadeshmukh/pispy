@@ -8,6 +8,18 @@ const { rows: all } = await db.execute(
   `SELECT onboarding_status, COUNT(*) as count FROM users GROUP BY onboarding_status`
 );
 const counts = Object.fromEntries(all.map(r => [r.onboarding_status as string, r.count as number]));
+
+// Submitted captures waiting for an admin to confirm the find.
+const { rows: captures } = await db.execute(`
+  SELECT a.id, a.submitted_at, a.score,
+         h.display_name AS hunter_name,
+         t.display_name AS target_name
+  FROM assignments a
+  JOIN users h ON h.slack_id = a.hunter_id
+  JOIN users t ON t.slack_id = a.target_id
+  WHERE a.status = 'submitted'
+  ORDER BY a.submitted_at ASC
+`);
 ---
 
 <!doctype html>
@@ -24,10 +36,9 @@ const counts = Object.fromEntries(all.map(r => [r.onboarding_status as string, r
         <a href="/admin/users">users</a>
         <a href="/admin/fields">fields</a>
         <a href="/admin/assignments">assignments</a>
+        <a href="/leaderboard">leaderboard</a>
         <a href="/api/auth/logout" class="logout">leave</a>
       </nav>
-
-      <h1>pending review</h1>
 
       <div class="stats">
         {Object.entries(counts).map(([status, count]) => (
@@ -35,6 +46,29 @@ const counts = Object.fromEntries(all.map(r => [r.onboarding_status as string, r
         ))}
       </div>
 
+      <h1>captures to confirm</h1>
+      {captures.length === 0 ? (
+        <p class="empty">no submissions waiting</p>
+      ) : (
+        <table>
+          <thead>
+            <tr><th>hunter</th><th>target</th><th>submitted</th><th>worth</th><th></th></tr>
+          </thead>
+          <tbody>
+            {captures.map(c => (
+              <tr>
+                <td>{c.hunter_name as string}</td>
+                <td>{c.target_name as string}</td>
+                <td class="muted">{new Date((c.submitted_at as number) * 1000).toLocaleString()}</td>
+                <td class="muted mono">{c.score as number} pts</td>
+                <td><a href={`/admin/assignment/${c.id}`}>review →</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <h1 class="spaced">onboarding to review</h1>
       {pending.length === 0 ? (
         <p class="empty">nothing to review</p>
       ) : (
@@ -59,24 +93,26 @@ const counts = Object.fromEntries(all.map(r => [r.onboarding_status as string, r
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
   .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem; }
   nav {
     display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
     padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem; font-style: italic;
+    font-size: 0.85rem;
   }
-  nav a { color: #666; text-decoration: none; }
+  nav a { color: #888; text-decoration: none; }
   nav a:hover { color: #ccc; }
   nav .logout { margin-left: auto; }
-  h1 { font-size: 1rem; font-weight: normal; font-style: italic; color: #888; margin-bottom: 1.25rem; }
-  .stats { display: flex; gap: 1.5rem; margin-bottom: 2rem; }
-  .stat { font-size: 0.75rem; color: #555; font-style: italic; }
-  .empty { font-size: 0.9rem; font-style: italic; color: #444; }
+  h1 { font-size: 1.05rem; font-weight: 600; color: #ddd; margin-bottom: 1rem; }
+  h1.spaced { margin-top: 2.5rem; }
+  .stats { display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+  .stat { font-size: 0.78rem; color: #888; }
+  .empty { font-size: 0.9rem; color: #666; }
   table { width: 100%; border-collapse: collapse; }
-  th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; font-weight: normal; padding: 0 0 0.5rem; text-align: left; }
+  th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #777; font-weight: 600; padding: 0 0 0.5rem; text-align: left; }
   td { padding: 0.65rem 0; border-top: 1px solid #1a1a1a; font-size: 0.875rem; }
-  td a { color: #888; text-decoration: none; font-style: italic; }
+  td a { color: #999; text-decoration: none; }
   td a:hover { color: #ccc; }
-  .muted { color: #555; font-size: 0.8rem; }
+  .muted { color: #777; font-size: 0.8rem; }
+  .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
 </style>

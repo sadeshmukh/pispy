@@ -216,7 +216,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
 
   .page {
     max-width: 480px;
@@ -237,7 +237,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
     text-transform: uppercase;
     margin-bottom: 0.4rem;
   }
-  .note p { font-size: 0.9rem; font-style: italic; color: #bbb; }
+  .note p { font-size: 0.9rem; color: #bbb; }
 
   header {
     display: flex;
@@ -251,7 +251,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
     object-fit: cover;
     filter: grayscale(30%);
   }
-  .name { font-style: italic; font-size: 1.1rem; color: #ddd; }
+  .name { font-size: 1.1rem; color: #ddd; }
 
   .section {
     margin-bottom: 1.75rem;
@@ -267,7 +267,6 @@ const existingClues: Record<string, string> = Object.fromEntries(
   .hint {
     font-size: 0.8rem;
     color: #555;
-    font-style: italic;
     margin-bottom: 0.75rem;
   }
 
@@ -288,7 +287,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
     border: 1px solid #2a2a2a;
     border-radius: 0;
     color: #ccc;
-    font-family: Georgia, serif;
+    font-family: system-ui, -apple-system, sans-serif;
     font-size: 0.9rem;
     padding: 0.5rem 0.65rem;
     outline: none;
@@ -321,15 +320,14 @@ const existingClues: Record<string, string> = Object.fromEntries(
     gap: 0.6rem;
     flex-wrap: wrap;
   }
-  .or { font-size: 0.75rem; color: #444; font-style: italic; }
+  .or { font-size: 0.75rem; color: #444; }
 
   .btn-outline {
     background: none;
     border: 1px solid #333;
     color: #888;
-    font-family: Georgia, serif;
+    font-family: system-ui, -apple-system, sans-serif;
     font-size: 0.8rem;
-    font-style: italic;
     padding: 0.35rem 0.8rem;
     cursor: pointer;
     transition: color 0.2s, border-color 0.2s;
@@ -339,9 +337,8 @@ const existingClues: Record<string, string> = Object.fromEntries(
     background: none;
     border: none;
     color: #555;
-    font-family: Georgia, serif;
+    font-family: system-ui, -apple-system, sans-serif;
     font-size: 0.8rem;
-    font-style: italic;
     cursor: pointer;
     padding: 0.35rem 0;
   }
@@ -352,9 +349,8 @@ const existingClues: Record<string, string> = Object.fromEntries(
     background: none;
     border: 1px solid #444;
     color: #ccc;
-    font-family: Georgia, serif;
+    font-family: system-ui, -apple-system, sans-serif;
     font-size: 0.9rem;
-    font-style: italic;
     padding: 0.6rem 2rem;
     cursor: pointer;
     transition: color 0.2s, border-color 0.2s;

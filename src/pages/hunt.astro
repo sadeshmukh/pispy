@@ -5,8 +5,8 @@ import {
   getAssignmentForHunter,
   getTargetClues,
   getReleasedFieldIds,
-  syncClueReleases,
-  secondsUntilNextClue,
+  computeScore,
+  CLUE_PENALTY,
 } from '../lib/hunt';
 
 const session = getSession(Astro.cookies);
@@ -24,23 +24,16 @@ if (status !== 'approved') return Astro.redirect('/');
 
 const assignment = await getAssignmentForHunter(session.slack_id);
 
-// Catch the released set up to where elapsed time says it should be, so the
-// drip stays current even without a scheduled job poking it.
-if (assignment) await syncClueReleases(assignment);
-
 const allClues = assignment ? await getTargetClues(assignment.target_id) : [];
 const released = assignment ? await getReleasedFieldIds(assignment.id) : new Set<number>();
 const revealedClues = allClues.filter(c => released.has(c.id));
+const cluesLeft = allClues.length - revealedClues.length;
 
-let nextInSeconds: number | null = null;
+// What a find would be worth if submitted right now.
+let potentialScore: number | null = null;
 if (assignment?.status === 'active' && assignment.started_at) {
-  nextInSeconds = secondsUntilNextClue(assignment.started_at, allClues.length, revealedClues.length);
-}
-
-function fmtCountdown(secs: number): string {
-  const m = Math.floor(secs / 60);
-  const s = secs % 60;
-  return `${m}m ${String(s).padStart(2, '0')}s`;
+  const elapsed = Math.floor(Date.now() / 1000) - assignment.started_at;
+  potentialScore = computeScore(revealedClues.length, elapsed);
 }
 ---
 
@@ -56,31 +49,55 @@ function fmtCountdown(secs: number): string {
     <div class="page">
       <nav>
         <a href="/">home</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+        <a href="/leaderboard">leaderboard</a>
+        <a href="/api/auth/logout" class="logout">log out</a>
       </nav>
 
       {!assignment ? (
         <div class="empty-state">
-          <p class="lead">no target yet</p>
-          <p class="sub">sit tight — you'll be assigned someone to find.</p>
+          <p class="lead">No target assigned yet.</p>
+          <p class="sub">You'll be assigned someone to find.</p>
         </div>
       ) : assignment.status === 'assigned' ? (
         <div class="empty-state">
-          <p class="lead">a target awaits</p>
-          <p class="sub">someone out there is yours to find. start whenever you're ready — the clues begin once you do.</p>
+          <p class="lead">You have a target.</p>
+          <p class="sub">Start when you're ready. Reveal fewer clues and find them faster to score more.</p>
           <form action="/api/hunt/start" method="POST">
-            <button type="submit" class="btn-start">start the hunt</button>
+            <button type="submit" class="btn-primary">Start hunt</button>
           </form>
+        </div>
+      ) : assignment.status === 'submitted' ? (
+        <div class="hunt">
+          <header>
+            <h1>Submitted for review</h1>
+            <p class="sub">An admin is confirming your photo. If it checks out, you'll earn {assignment.score} points.</p>
+          </header>
+          <img src={`/api/captures/${assignment.id}`} alt="your submission" class="submission-photo" />
+        </div>
+      ) : assignment.status === 'completed' ? (
+        <div class="hunt">
+          <header>
+            <h1>Target found</h1>
+            <p class="sub">Confirmed. You earned {assignment.score} points. <a href="/leaderboard">See the leaderboard.</a></p>
+          </header>
+          <img src={`/api/captures/${assignment.id}`} alt="your submission" class="submission-photo" />
         </div>
       ) : (
         <div class="hunt">
           <header>
-            <h1>the hunt is on</h1>
-            <p class="sub">clues about your target arrive every 15 minutes. piece them together.</p>
+            <h1>Your target</h1>
+            <p class="sub">Reveal clues to work out who it is. Each clue costs {CLUE_PENALTY} points off your find.</p>
           </header>
 
+          {assignment.review_note && (
+            <div class="note">
+              <span class="note-label">submission rejected</span>
+              <p>{assignment.review_note}</p>
+            </div>
+          )}
+
           {revealedClues.length === 0 ? (
-            <p class="empty">no clues yet — hang tight.</p>
+            <p class="empty">No clues revealed yet.</p>
           ) : (
             <div class="clues">
               {revealedClues.map((c, i) => (
@@ -96,78 +113,225 @@ function fmtCountdown(secs: number): string {
           )}
 
           <div class="meta">
-            <span>{revealedClues.length} of {allClues.length} clues</span>
-            {nextInSeconds !== null && (
-              <span data-countdown={nextInSeconds}>next clue in {fmtCountdown(nextInSeconds)}</span>
-            )}
+            <span>{revealedClues.length} of {allClues.length} clues revealed</span>
+            {potentialScore !== null && <span>worth ~{potentialScore} pts now</span>}
+          </div>
+
+          {cluesLeft > 0 && (
+            <form action="/api/hunt/reveal" method="POST" class="reveal-form">
+              <button type="submit" class="btn-secondary">Reveal a clue ({cluesLeft} left)</button>
+            </form>
+          )}
+
+          <div class="submit-block">
+            <p class="submit-title">Found them?</p>
+            <p class="submit-hint">Submit a photo of your target that clearly shows their face and badge.</p>
+            <form action="/api/hunt/submit" method="POST" enctype="multipart/form-data" id="submit-form">
+              <div class="photo-field" id="capture-field">
+                <div class="photo-preview-wrap">
+                  <img id="capture-preview" class="photo-preview" hidden alt="" />
+                  <video id="capture-video" class="photo-video" autoplay playsinline muted hidden></video>
+                  <canvas id="capture-canvas" hidden></canvas>
+                </div>
+                <div class="photo-actions">
+                  <label class="btn-outline">
+                    upload file
+                    <input type="file" id="capture-file" accept="image/*" hidden>
+                  </label>
+                  <span class="or">or</span>
+                  <button type="button" class="btn-outline" id="capture-camera-open">use camera</button>
+                  <button type="button" class="btn-outline" id="capture-snap" hidden>snap</button>
+                  <button type="button" class="btn-ghost" id="capture-retake" hidden>retake</button>
+                </div>
+                <input type="hidden" name="capture_photo_data" id="capture-data" />
+                <input type="file" name="capture_photo_file" id="capture-file-fallback" accept="image/*" class="fallback-file" />
+              </div>
+              <button type="submit" class="btn-primary">Submit photo</button>
+            </form>
           </div>
         </div>
       )}
     </div>
 
     <script>
-      // Soft auto-refresh: when the next clue is due, reload to pull it in.
-      const el = document.querySelector('[data-countdown]') as HTMLElement | null;
-      if (el) {
-        let remaining = parseInt(el.dataset.countdown ?? '0', 10);
-        const tick = () => {
-          remaining -= 1;
-          if (remaining <= 0) {
-            location.reload();
-            return;
+      function setupPhotoField(id: string) {
+        const fileInput = document.getElementById(`${id}-file`) as HTMLInputElement | null;
+        if (!fileInput) return;
+        const fileFallback = document.getElementById(`${id}-file-fallback`) as HTMLInputElement;
+        const dataInput = document.getElementById(`${id}-data`) as HTMLInputElement;
+        const preview = document.getElementById(`${id}-preview`) as HTMLImageElement;
+        const video = document.getElementById(`${id}-video`) as HTMLVideoElement;
+        const canvas = document.getElementById(`${id}-canvas`) as HTMLCanvasElement;
+        const cameraOpen = document.getElementById(`${id}-camera-open`) as HTMLButtonElement;
+        const snapBtn = document.getElementById(`${id}-snap`) as HTMLButtonElement;
+        const retakeBtn = document.getElementById(`${id}-retake`) as HTMLButtonElement;
+
+        let stream: MediaStream | null = null;
+
+        function showPreview(dataUrl: string) {
+          preview.src = dataUrl;
+          preview.hidden = false;
+          video.hidden = true;
+          snapBtn.hidden = true;
+          retakeBtn.hidden = false;
+          cameraOpen.hidden = true;
+          fileFallback.disabled = true;
+        }
+
+        function stopStream() {
+          stream?.getTracks().forEach(t => t.stop());
+          stream = null;
+          video.hidden = true;
+        }
+
+        fileInput.addEventListener('change', () => {
+          const file = fileInput.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = e => {
+            const result = e.target?.result as string;
+            dataInput.value = result;
+            fileFallback.disabled = true;
+            showPreview(result);
+            stopStream();
+          };
+          reader.readAsDataURL(file);
+        });
+
+        cameraOpen.addEventListener('click', async () => {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            video.srcObject = stream;
+            video.hidden = false;
+            preview.hidden = true;
+            snapBtn.hidden = false;
+            cameraOpen.hidden = true;
+          } catch {
+            alert('Could not access camera. Please upload a file instead.');
           }
-          const m = Math.floor(remaining / 60);
-          const s = remaining % 60;
-          el.textContent = `next clue in ${m}m ${String(s).padStart(2, '0')}s`;
-        };
-        setInterval(tick, 1000);
+        });
+
+        snapBtn.addEventListener('click', () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext('2d')!.drawImage(video, 0, 0);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          dataInput.value = dataUrl;
+          fileFallback.disabled = true;
+          showPreview(dataUrl);
+          stopStream();
+        });
+
+        retakeBtn.addEventListener('click', () => {
+          dataInput.value = '';
+          preview.hidden = true;
+          retakeBtn.hidden = true;
+          cameraOpen.hidden = false;
+          fileFallback.disabled = false;
+        });
       }
+
+      setupPhotoField('capture');
+
+      document.querySelectorAll('.fallback-file').forEach(el => {
+        (el as HTMLElement).style.display = 'none';
+      });
     </script>
   </body>
 </html>
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
   .page { max-width: 560px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
   nav {
     display: flex; gap: 1.5rem; margin-bottom: 3rem;
     padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem; font-style: italic;
+    font-size: 0.85rem;
   }
-  nav a { color: #666; text-decoration: none; }
+  nav a { color: #888; text-decoration: none; }
   nav a:hover { color: #ccc; }
   nav .logout { margin-left: auto; }
 
   .empty-state { text-align: center; padding: 3rem 0; }
-  .lead { font-size: 1.3rem; font-style: italic; color: #ddd; margin-bottom: 0.6rem; }
-  .sub { font-size: 0.9rem; color: #666; font-style: italic; margin-bottom: 2rem; line-height: 1.5; }
+  .lead { font-size: 1.2rem; color: #ddd; margin-bottom: 0.6rem; }
+  .sub { font-size: 0.9rem; color: #888; margin-bottom: 1.5rem; line-height: 1.5; }
+  .sub a { color: #6a9aba; }
 
   header { margin-bottom: 2rem; }
-  h1 { font-size: 1.3rem; font-weight: normal; font-style: italic; color: #ddd; margin-bottom: 0.5rem; }
+  h1 { font-size: 1.2rem; font-weight: 600; color: #ddd; margin-bottom: 0.5rem; }
   header .sub { margin-bottom: 0; }
 
-  .btn-start {
+  .note {
+    border-left: 2px solid #8a4a4a; padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem; background: #1a1414; border-radius: 0 4px 4px 0;
+  }
+  .note-label { font-size: 0.65rem; letter-spacing: 0.1em; color: #aa6a6a; text-transform: uppercase; display: block; margin-bottom: 0.3rem; }
+  .note p { font-size: 0.88rem; color: #ccbbbb; }
+
+  .btn-primary {
+    background: #2a3a4a; border: 1px solid #3a5a7a; color: #cfe2f0;
+    font-family: inherit; font-size: 0.95rem;
+    padding: 0.6rem 2rem; cursor: pointer; border-radius: 4px;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .btn-primary:hover { background: #34485c; border-color: #4a6a8a; }
+
+  .btn-secondary {
     background: none; border: 1px solid #444; color: #ccc;
-    font-family: Georgia, serif; font-size: 0.95rem; font-style: italic;
-    padding: 0.6rem 2rem; cursor: pointer;
+    font-family: inherit; font-size: 0.9rem;
+    padding: 0.55rem 1.5rem; cursor: pointer; border-radius: 4px;
     transition: color 0.2s, border-color 0.2s;
   }
-  .btn-start:hover { color: #fff; border-color: #888; }
+  .btn-secondary:hover { color: #fff; border-color: #888; }
 
-  .empty { font-size: 0.9rem; font-style: italic; color: #444; }
+  .empty { font-size: 0.9rem; color: #666; }
   .clues { display: flex; flex-direction: column; }
   .clue {
     display: flex; gap: 1rem; align-items: baseline;
     padding: 1rem 0; border-top: 1px solid #1a1a1a;
   }
-  .clue-num { font-family: ui-monospace, monospace; font-size: 0.7rem; color: #444; }
-  .clue-prompt { display: block; font-size: 0.75rem; color: #666; font-style: italic; margin-bottom: 0.3rem; }
+  .clue-num { font-family: ui-monospace, monospace; font-size: 0.7rem; color: #666; }
+  .clue-prompt { display: block; font-size: 0.75rem; color: #888; margin-bottom: 0.3rem; }
   .clue-answer { display: block; font-size: 1rem; color: #ddd; }
 
   .meta {
-    display: flex; justify-content: space-between;
-    margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #1e1e1e;
-    font-size: 0.75rem; color: #555; font-style: italic;
+    display: flex; justify-content: space-between; gap: 1rem;
+    margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #1e1e1e;
+    font-size: 0.78rem; color: #888;
   }
+  .reveal-form { margin-top: 1.25rem; }
+
+  .submit-block { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #1e1e1e; }
+  .submit-title { font-size: 1rem; color: #ddd; margin-bottom: 0.3rem; }
+  .submit-hint { font-size: 0.82rem; color: #888; margin-bottom: 1.25rem; line-height: 1.5; }
+
+  .submission-photo {
+    width: 100%; border-radius: 6px; border: 1px solid #222; display: block;
+  }
+
+  .photo-preview-wrap {
+    width: 100%; aspect-ratio: 4/3; background: #161616;
+    border: 1px solid #222; border-radius: 4px; margin-bottom: 0.6rem;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+  .photo-preview, .photo-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-preview[hidden], .photo-video[hidden] { display: none; }
+
+  .photo-actions { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .or { font-size: 0.78rem; color: #666; }
+
+  .btn-outline {
+    background: none; border: 1px solid #333; color: #999;
+    font-family: inherit; font-size: 0.82rem;
+    padding: 0.35rem 0.8rem; cursor: pointer; border-radius: 4px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-outline:hover { color: #ccc; border-color: #555; }
+  .btn-ghost {
+    background: none; border: none; color: #777; font-family: inherit;
+    font-size: 0.82rem; cursor: pointer; padding: 0.35rem 0;
+  }
+  .btn-ghost:hover { color: #aaa; }
+  .fallback-file { display: none; }
 </style>

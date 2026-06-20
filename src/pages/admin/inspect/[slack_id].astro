@@ -133,12 +133,12 @@ const currentStatus = user.onboarding_status as string;
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
   .page { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
   nav {
     display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
     padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem; font-style: italic;
+    font-size: 0.8rem;
   }
   nav a { color: #666; text-decoration: none; }
   nav a:hover { color: #ccc; }
@@ -146,25 +146,25 @@ const currentStatus = user.onboarding_status as string;
 
   header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2.5rem; }
   .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; filter: grayscale(20%); }
-  h1 { font-size: 1.1rem; font-weight: normal; font-style: italic; color: #ddd; margin-bottom: 0.15rem; }
+  h1 { font-size: 1.1rem; font-weight: normal; color: #ddd; margin-bottom: 0.15rem; }
   .slack-id { font-size: 0.75rem; color: #555; font-family: ui-monospace, monospace; }
 
   section { margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 1px solid #1a1a1a; }
   section:last-child { border-bottom: none; }
   .section-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 1rem; }
-  .empty { font-size: 0.9rem; font-style: italic; color: #555; }
+  .empty { font-size: 0.9rem; color: #555; }
   .empty a { color: #888; }
 
   .stack { display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
   .field { display: flex; flex-direction: column; gap: 0.35rem; width: 100%; }
-  .field > span { font-size: 0.7rem; color: #666; font-style: italic; }
+  .field > span { font-size: 0.7rem; color: #666; }
 
   input[type="text"], select, textarea {
     background: #161616; border: 1px solid #2a2a2a; color: #ccc;
-    font-family: Georgia, serif; font-size: 0.9rem; padding: 0.5rem 0.65rem;
+    font-family: system-ui, -apple-system, sans-serif; font-size: 0.9rem; padding: 0.5rem 0.65rem;
     outline: none; width: 100%; transition: border-color 0.2s;
   }
-  input[type="text"], textarea { font-style: italic; }
+  input[type="text"], textarea { }
   input[type="text"]:focus, select:focus, textarea:focus { border-color: #555; }
   textarea { resize: vertical; }
   input[type="file"] { font-family: ui-monospace, monospace; font-size: 0.75rem; color: #888; }
@@ -178,7 +178,7 @@ const currentStatus = user.onboarding_status as string;
 
   .btn-save {
     background: none; border: 1px solid #333; color: #888;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
+    font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem;
     padding: 0.45rem 1.25rem; cursor: pointer;
     transition: border-color 0.2s, color 0.2s;
   }

@@ -1,0 +1,22 @@
+import type { APIRoute } from 'astro';
+import { db } from '../../../lib/db';
+import { getSession } from '../../../lib/auth';
+import { getAssignmentForHunter, revealNextClue } from '../../../lib/hunt';
+
+export const POST: APIRoute = async ({ cookies, redirect }) => {
+  const session = getSession(cookies);
+  if (!session) return redirect('/');
+
+  const { rows } = await db.execute({
+    sql: 'SELECT onboarding_status FROM users WHERE slack_id = ?',
+    args: [session.slack_id],
+  });
+  if (rows[0]?.onboarding_status !== 'approved') return redirect('/');
+
+  const assignment = await getAssignmentForHunter(session.slack_id);
+  if (assignment && assignment.status === 'active') {
+    await revealNextClue(assignment);
+  }
+
+  return redirect('/hunt');
+};

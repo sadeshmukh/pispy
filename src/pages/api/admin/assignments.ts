@@ -107,5 +107,39 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     return redirect(detail);
   }
 
+  if (action === 'approve_capture') {
+    // Confirm the submitted photo really is the target: lock in the score and
+    // mark the hunt found.
+    if (assignment.status === 'submitted') {
+      await db.execute({
+        sql: `UPDATE assignments SET status = 'completed', review_note = NULL WHERE id = ?`,
+        args: [id],
+      });
+      // TODO(slack): notify the hunter their find was confirmed and points awarded.
+    }
+    return redirect(detail);
+  }
+
+  if (action === 'reject_capture') {
+    // Not the target (or unclear): send the hunt back so the hunter can keep
+    // going and submit again. The provisional score is cleared.
+    if (assignment.status === 'submitted') {
+      const note = (formData.get('note') as string)?.trim() || null;
+      await db.execute({
+        sql: `UPDATE assignments SET
+                status = 'active',
+                submitted_at = NULL,
+                score = NULL,
+                submission_photo = NULL,
+                submission_photo_mime = NULL,
+                review_note = ?
+              WHERE id = ?`,
+        args: [note, id],
+      });
+      // TODO(slack): notify the hunter their submission was rejected.
+    }
+    return redirect(detail);
+  }
+
   return redirect(detail);
 };

@@ -37,6 +37,11 @@ export async function initDb() {
       target_id TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'assigned',
       started_at INTEGER,
+      submitted_at INTEGER,
+      score INTEGER,
+      submission_photo BLOB,
+      submission_photo_mime TEXT,
+      review_note TEXT,
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
     CREATE TABLE IF NOT EXISTS clue_releases (
@@ -46,4 +51,22 @@ export async function initDb() {
       PRIMARY KEY (assignment_id, field_id)
     );
   `);
+
+  // Idempotent migrations for databases created before the capture/score
+  // columns existed. ALTER TABLE ADD COLUMN throws if the column is already
+  // there, so each one is guarded individually.
+  const migrations = [
+    `ALTER TABLE assignments ADD COLUMN submitted_at INTEGER`,
+    `ALTER TABLE assignments ADD COLUMN score INTEGER`,
+    `ALTER TABLE assignments ADD COLUMN submission_photo BLOB`,
+    `ALTER TABLE assignments ADD COLUMN submission_photo_mime TEXT`,
+    `ALTER TABLE assignments ADD COLUMN review_note TEXT`,
+  ];
+  for (const sql of migrations) {
+    try {
+      await db.execute(sql);
+    } catch {
+      // column already exists — nothing to do
+    }
+  }
 }
