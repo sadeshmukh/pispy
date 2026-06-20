@@ -36,7 +36,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" href="/favicon.ico" />
-    <title>pispy — setup</title>
+    <title>pispy - gib us ur data :3</title>
   </head>
   <body>
     <div class="page">
@@ -51,11 +51,11 @@ const existingClues: Record<string, string> = Object.fromEntries(
         {session.avatar_url && <img src={session.avatar_url} alt="" class="avatar" />}
         <span class="name">{session.display_name}</span>
       </header>
-
+      <b>we thank you for trusting us with your data ; we will not extort, sell, or use this maliciously. the data shall only kept until the end of sunday/demos and usage scope limited to this project</b>
       <form id="onboard-form" action="/api/onboard" method="POST" enctype="multipart/form-data">
         <div class="section">
           <label>badge photo</label>
-          <p class="hint">a photo of your ID or badge</p>
+          <p class="hint">a photo of your badge</p>
           <div class="photo-field" id="badge-field">
             <div class="photo-preview-wrap">
               <img id="badge-preview" class="photo-preview" hidden alt="" />
@@ -64,12 +64,12 @@ const existingClues: Record<string, string> = Object.fromEntries(
             </div>
             <div class="photo-actions">
               <label class="btn-outline">
-                upload file
+                upload file(... sane img)
                 <input type="file" id="badge-file" accept="image/*" hidden>
               </label>
               <span class="or">or</span>
-              <button type="button" class="btn-outline" id="badge-camera-open">use camera</button>
-              <button type="button" class="btn-outline" id="badge-snap" hidden>snap</button>
+              <button type="button" class="btn-outline" id="badge-camera-open">use device camera</button>
+              <button type="button" class="btn-outline" id="badge-snap" hidden>snap(smilee)</button>
               <button type="button" class="btn-ghost" id="badge-retake" hidden>retake</button>
             </div>
             <input type="hidden" name="badge_photo_data" id="badge-data" />
@@ -78,7 +78,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
         </div>
 
         <div class="section">
-          <label>face photo</label>
+          <label>face photo(smile! :3)</label>
           <p class="hint">a clear photo of your face</p>
           <div class="photo-field" id="face-field">
             <div class="photo-preview-wrap">
