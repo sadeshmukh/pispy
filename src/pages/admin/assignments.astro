@@ -22,6 +22,7 @@ const { rows: assignments } = await db.execute(`
 const statusLabel: Record<string, string> = {
   assigned: 'not started',
   active: 'hunting',
+  submitted: 'needs review',
   completed: 'found',
 };
 ---
@@ -40,11 +41,12 @@ const statusLabel: Record<string, string> = {
         <a href="/admin/users">users</a>
         <a href="/admin/fields">fields</a>
         <a href="/admin/assignments">assignments</a>
+        <a href="/leaderboard">leaderboard</a>
         <a href="/api/auth/logout" class="logout">leave</a>
       </nav>
 
       <h1>assignments</h1>
-      <p class="sub">give a hunter a target to find. clues drip out automatically once the hunt starts.</p>
+      <p class="sub">Assign each hunter a target. Hunters reveal clues and submit a photo when they find them.</p>
 
       {assignments.length === 0 ? (
         <p class="empty">no assignments yet</p>
@@ -109,54 +111,55 @@ const statusLabel: Record<string, string> = {
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
   .page { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
   nav {
     display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
     padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem; font-style: italic;
+    font-size: 0.85rem;
   }
-  nav a { color: #666; text-decoration: none; }
+  nav a { color: #888; text-decoration: none; }
   nav a:hover { color: #ccc; }
   nav .logout { margin-left: auto; }
-  h1 { font-size: 1rem; font-weight: normal; font-style: italic; color: #888; margin-bottom: 0.4rem; }
-  .sub { font-size: 0.8rem; color: #555; font-style: italic; margin-bottom: 1.75rem; }
-  .empty { font-size: 0.9rem; font-style: italic; color: #444; }
+  h1 { font-size: 1.05rem; font-weight: 600; color: #ddd; margin-bottom: 0.4rem; }
+  .sub { font-size: 0.82rem; color: #888; margin-bottom: 1.75rem; }
+  .empty { font-size: 0.9rem; color: #666; }
 
   table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
   th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; font-weight: normal; padding: 0 0 0.5rem; text-align: left; }
   td { padding: 0.65rem 0; border-top: 1px solid #1a1a1a; font-size: 0.875rem; vertical-align: middle; }
-  .muted { color: #555; font-size: 0.8rem; }
+  .muted { color: #777; font-size: 0.8rem; }
   .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
-  .status-assigned { color: #7a7a4a; }
-  .status-active { color: #5a7a8a; }
-  .status-completed { color: #5a7a5a; }
+  .status-assigned { color: #b3b35a; }
+  .status-active { color: #6a9aba; }
+  .status-submitted { color: #c08a4a; }
+  .status-completed { color: #6a9a6a; }
 
   .row-actions { display: flex; gap: 1.25rem; align-items: center; }
-  .row-actions a { color: #888; text-decoration: none; font-style: italic; }
+  .row-actions a { color: #999; text-decoration: none; }
   .row-actions a:hover { color: #ccc; }
   .btn-delete {
-    background: none; border: none; color: #5a3a3a; font-family: Georgia, serif;
-    font-size: 0.8rem; font-style: italic; cursor: pointer; padding: 0;
+    background: none; border: none; color: #aa6a6a; font-family: inherit;
+    font-size: 0.8rem; cursor: pointer; padding: 0;
   }
-  .btn-delete:hover { color: #aa6a6a; }
+  .btn-delete:hover { color: #ca8a8a; }
 
   .add-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #1e1e1e; }
-  .add-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 0.75rem; }
+  .add-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #777; margin-bottom: 0.75rem; }
   .add-form { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
   .add-form label { display: flex; flex-direction: column; gap: 0.35rem; }
-  .add-form label span { font-size: 0.7rem; color: #666; font-style: italic; }
+  .add-form label span { font-size: 0.72rem; color: #999; }
   select {
     background: #161616; border: 1px solid #2a2a2a; color: #ccc;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
-    padding: 0.4rem 0.6rem; outline: none; min-width: 180px;
+    font-family: inherit; font-size: 0.85rem;
+    padding: 0.4rem 0.6rem; outline: none; min-width: 180px; border-radius: 4px;
   }
-  select:focus { border-color: #444; }
+  select:focus { border-color: #555; }
   .btn-add {
-    background: none; border: 1px solid #333; color: #888;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
-    padding: 0.4rem 1.25rem; cursor: pointer; white-space: nowrap;
+    background: none; border: 1px solid #444; color: #ccc;
+    font-family: inherit; font-size: 0.85rem;
+    padding: 0.4rem 1.25rem; cursor: pointer; white-space: nowrap; border-radius: 4px;
     transition: border-color 0.2s, color 0.2s;
   }
-  .btn-add:hover { border-color: #555; color: #ccc; }
+  .btn-add:hover { border-color: #888; color: #fff; }
 </style>

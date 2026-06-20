@@ -20,6 +20,7 @@ const { rows: fields } = await db.execute(
         <a href="/admin/users">users</a>
         <a href="/admin/fields">fields</a>
         <a href="/admin/assignments">assignments</a>
+        <a href="/leaderboard">leaderboard</a>
         <a href="/api/auth/logout" class="logout">leave</a>
       </nav>
 
@@ -73,18 +74,18 @@ const { rows: fields } = await db.execute(
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
   .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
   nav {
     display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
     padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem; font-style: italic;
+    font-size: 0.8rem;
   }
   nav a { color: #666; text-decoration: none; }
   nav a:hover { color: #ccc; }
   nav .logout { margin-left: auto; }
-  h1 { font-size: 1rem; font-weight: normal; font-style: italic; color: #888; margin-bottom: 0.4rem; }
-  .sub { font-size: 0.8rem; color: #555; font-style: italic; margin-bottom: 1.75rem; }
+  h1 { font-size: 1rem; font-weight: normal; color: #888; margin-bottom: 0.4rem; }
+  .sub { font-size: 0.8rem; color: #555; margin-bottom: 1.75rem; }
 
   table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
   th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; font-weight: normal; padding: 0 0 0.5rem; text-align: left; }
@@ -95,7 +96,7 @@ const { rows: fields } = await db.execute(
   .inline-form { display: flex; gap: 0.5rem; align-items: center; }
   input[type="text"] {
     background: #161616; border: 1px solid #2a2a2a; color: #ccc;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
+    font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem;
     padding: 0.35rem 0.6rem; outline: none; flex: 1;
   }
   input[type="text"]:focus { border-color: #444; }
@@ -107,25 +108,25 @@ const { rows: fields } = await db.execute(
   input[type="number"] { -moz-appearance: textfield; }
 
   .btn-ghost {
-    background: none; border: none; color: #555; font-family: Georgia, serif;
-    font-size: 0.8rem; font-style: italic; cursor: pointer; padding: 0.2rem 0;
+    background: none; border: none; color: #555; font-family: system-ui, -apple-system, sans-serif;
+    font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0;
     white-space: nowrap;
   }
   .btn-ghost:hover { color: #999; }
   .btn-delete {
-    background: none; border: none; color: #5a3a3a; font-family: Georgia, serif;
-    font-size: 0.8rem; font-style: italic; cursor: pointer; padding: 0.2rem 0;
+    background: none; border: none; color: #5a3a3a; font-family: system-ui, -apple-system, sans-serif;
+    font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0;
   }
   .btn-delete:hover { color: #aa6a6a; }
 
-  .empty { font-size: 0.9rem; font-style: italic; color: #444; margin-bottom: 2rem; }
+  .empty { font-size: 0.9rem; color: #444; margin-bottom: 2rem; }
 
   .add-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #1e1e1e; }
   .add-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 0.75rem; }
   .add-form { display: flex; gap: 0.75rem; }
   .btn-add {
     background: none; border: 1px solid #333; color: #888;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
+    font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem;
     padding: 0.35rem 1rem; cursor: pointer; white-space: nowrap;
     transition: border-color 0.2s, color 0.2s;
   }

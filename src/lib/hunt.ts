@@ -1,14 +1,21 @@
 import { db } from './db';
 
-// How often a hunter earns their next clue once a hunt is active.
-export const CLUE_INTERVAL_SECONDS = 15 * 60;
+// Scoring: a find starts from BASE_SCORE and loses points for every clue the
+// hunter revealed and for how long the hunt took. Earlier + fewer clues wins.
+export const BASE_SCORE = 1000;
+export const CLUE_PENALTY = 100; // points lost per clue revealed
+export const TIME_PENALTY_PER_HOUR = 50; // points lost per hour since the hunt started
+export const MIN_SCORE = 100; // a successful find always earns at least this
 
 export type Assignment = {
   id: number;
   hunter_id: string;
   target_id: string;
-  status: string; // 'assigned' | 'active' | 'completed'
+  status: string; // 'assigned' | 'active' | 'submitted' | 'completed'
   started_at: number | null;
+  submitted_at: number | null;
+  score: number | null;
+  review_note: string | null;
   created_at: number;
 };
 
@@ -26,18 +33,27 @@ function rowToAssignment(row: Record<string, unknown> | undefined): Assignment |
     target_id: row.target_id as string,
     status: row.status as string,
     started_at: (row.started_at as number | null) ?? null,
+    submitted_at: (row.submitted_at as number | null) ?? null,
+    score: (row.score as number | null) ?? null,
+    review_note: (row.review_note as string | null) ?? null,
     created_at: row.created_at as number,
   };
 }
 
+const ASSIGNMENT_COLUMNS =
+  'id, hunter_id, target_id, status, started_at, submitted_at, score, review_note, created_at';
+
 export async function getAssignment(id: number): Promise<Assignment | null> {
-  const { rows } = await db.execute({ sql: 'SELECT * FROM assignments WHERE id = ?', args: [id] });
+  const { rows } = await db.execute({
+    sql: `SELECT ${ASSIGNMENT_COLUMNS} FROM assignments WHERE id = ?`,
+    args: [id],
+  });
   return rowToAssignment(rows[0]);
 }
 
 export async function getAssignmentForHunter(hunter_id: string): Promise<Assignment | null> {
   const { rows } = await db.execute({
-    sql: 'SELECT * FROM assignments WHERE hunter_id = ?',
+    sql: `SELECT ${ASSIGNMENT_COLUMNS} FROM assignments WHERE hunter_id = ?`,
     args: [hunter_id],
   });
   return rowToAssignment(rows[0]);
@@ -64,60 +80,34 @@ export async function getReleasedFieldIds(assignmentId: number): Promise<Set<num
   return new Set(rows.map(r => r.field_id as number));
 }
 
-// How many clues should be available given how long the hunt has run.
-// The first clue lands the moment the hunt starts, then one per interval.
-export function expectedReleaseCount(startedAt: number, now = Math.floor(Date.now() / 1000)): number {
-  if (!startedAt) return 0;
-  const elapsed = Math.max(0, now - startedAt);
-  return Math.floor(elapsed / CLUE_INTERVAL_SECONDS) + 1;
+// The score a find would earn right now given how many clues the hunter has
+// revealed and how long the hunt has been running.
+export function computeScore(cluesRevealed: number, elapsedSeconds: number): number {
+  const timePenalty = Math.floor((Math.max(0, elapsedSeconds) / 3600) * TIME_PENALTY_PER_HOUR);
+  const raw = BASE_SCORE - CLUE_PENALTY * cluesRevealed - timePenalty;
+  return Math.max(MIN_SCORE, raw);
 }
 
-// Seconds until the next clue is due, or null if all clues are out / not active.
-export function secondsUntilNextClue(
-  startedAt: number,
-  totalClues: number,
-  releasedCount: number,
-  now = Math.floor(Date.now() / 1000),
-): number | null {
-  if (!startedAt || releasedCount >= totalClues) return null;
-  const elapsed = Math.max(0, now - startedAt);
-  return CLUE_INTERVAL_SECONDS - (elapsed % CLUE_INTERVAL_SECONDS);
-}
-
-// Bring the released-clue set up to where it should be given elapsed time.
-// Only ever ADDS clues (lowest reveal-order first); admin revocations are not
-// fought here beyond the time-based count. Returns the field ids newly released
-// so a caller (e.g. a scheduled job) can fire notifications for them.
-export async function syncClueReleases(assignment: Assignment): Promise<number[]> {
-  if (assignment.status !== 'active' || !assignment.started_at) return [];
-
+// Reveal the next clue (lowest reveal-order) the hunter hasn't seen yet.
+// Returns the revealed field id, or null if there's nothing left to reveal.
+export async function revealNextClue(assignment: Assignment): Promise<number | null> {
+  if (assignment.status !== 'active') return null;
   const clues = await getTargetClues(assignment.target_id);
-  if (clues.length === 0) return [];
-
   const released = await getReleasedFieldIds(assignment.id);
-  const expected = Math.min(clues.length, expectedReleaseCount(assignment.started_at));
-  const newlyReleased: number[] = [];
-
-  for (const clue of clues) {
-    if (released.size + newlyReleased.length >= expected) break;
-    if (released.has(clue.id)) continue;
-    await db.execute({
-      sql: `INSERT INTO clue_releases (assignment_id, field_id) VALUES (?, ?)
-            ON CONFLICT (assignment_id, field_id) DO NOTHING`,
-      args: [assignment.id, clue.id],
-    });
-    newlyReleased.push(clue.id);
-  }
-
-  // TODO(slack): for each newly released clue, notify the hunter that a new
-  // clue about their target is now available. (Drives the "every 15 minutes"
-  // notification — call this from a scheduled job, see notes in this file.)
-  return newlyReleased;
+  const next = clues.find(c => !released.has(c.id));
+  if (!next) return null;
+  await db.execute({
+    sql: `INSERT INTO clue_releases (assignment_id, field_id) VALUES (?, ?)
+          ON CONFLICT (assignment_id, field_id) DO NOTHING`,
+    args: [assignment.id, next.id],
+  });
+  return next.id;
 }
 
-// Transition an 'assigned' hunt into 'active': stamp the start time and hand
-// out the first clue. Safe to call from either the hunter ("start") or an admin
-// force-start. No-op if the hunt is not in the 'assigned' state.
+// Transition an 'assigned' hunt into 'active': stamp the start time. Clues are
+// no longer handed out automatically — the hunter reveals them at their own
+// pace. Safe to call from either the hunter or an admin force-start. No-op if
+// the hunt is not in the 'assigned' state.
 export async function startAssignment(assignmentId: number): Promise<boolean> {
   const now = Math.floor(Date.now() / 1000);
   const res = await db.execute({
@@ -125,13 +115,5 @@ export async function startAssignment(assignmentId: number): Promise<boolean> {
           WHERE id = ? AND status = 'assigned'`,
     args: [now, assignmentId],
   });
-  if (res.rowsAffected === 0) return false;
-
-  const assignment = await getAssignment(assignmentId);
-  if (assignment) await syncClueReleases(assignment);
-
-  // TODO(slack): notify the target that someone has started hunting them.
-  // TODO(slack): notify the hunter that their hunt has begun (and include the
-  // first clue released above).
-  return true;
+  return res.rowsAffected > 0;
 }

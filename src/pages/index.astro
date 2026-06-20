@@ -29,17 +29,18 @@ if (session) {
   <body>
     <main>
       {!session ? (
-        <a href="/api/auth/login">join</a>
+        <a href="/api/auth/login">Sign in</a>
       ) : status === 'pending_review' ? (
         <div class="status-block">
-          <p>under review</p>
-          <a href="/api/auth/logout">leave</a>
+          <p>Your account is pending review.</p>
+          <a href="/api/auth/logout">Log out</a>
         </div>
       ) : (
         <div class="status-block">
           <p>{session.display_name}</p>
-          <a href="/hunt">the hunt</a>
-          <a href="/api/auth/logout">leave</a>
+          <a href="/hunt">Hunt</a>
+          <a href="/leaderboard">Leaderboard</a>
+          <a href="/api/auth/logout">Log out</a>
         </div>
       )}
     </main>
@@ -55,9 +56,8 @@ if (session) {
   }
   a, p {
     color: #ccc;
-    font-family: Georgia, serif;
+    font-family: system-ui, -apple-system, sans-serif;
     font-size: 1rem;
-    font-style: italic;
     text-decoration: none;
   }
   a:hover { color: #fff; }
