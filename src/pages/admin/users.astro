@@ -1,4 +1,5 @@
 ---
+import '../../styles/global.css';
 import { db } from '../../lib/db';
 
 const { rows: users } = await db.execute(
@@ -21,69 +22,53 @@ const statusLabel: Record<string, string> = {
     <title>pispy — users</title>
   </head>
   <body>
-    <div class="page">
-      <nav>
-        <a href="/admin">review</a>
-        <a href="/admin/users">users</a>
-        <a href="/admin/fields">fields</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+    <div class="mx-auto w-full max-w-5xl px-5 py-8">
+      <nav class="mb-8 flex flex-wrap items-center gap-2 rounded-lg border border-stone-300 bg-white/80 p-2 shadow-[0_8px_22px_rgba(15,23,42,0.06)]">
+        <a class="rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/admin">Review</a>
+        <a class="rounded-md px-3 py-2 text-sm font-black text-slate-900 no-underline hover:bg-amber-100" href="/admin/users">Users</a>
+        <a class="rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/admin/fields">Fields</a>
+        <a class="ml-auto rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/api/auth/logout">Log out</a>
       </nav>
 
-      <h1>all users ({users.length})</h1>
+      <header class="mb-6">
+        <div class="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Admin</div>
+        <h1 class="m-0 text-4xl font-black leading-none text-slate-900">All users ({users.length})</h1>
+      </header>
 
       {users.length === 0 ? (
-        <p class="empty">no users yet</p>
+        <p class="rounded-lg border border-stone-300 bg-white p-4 font-bold text-slate-600">No users yet.</p>
       ) : (
-        <table>
+        <div class="overflow-x-auto rounded-lg border border-stone-300 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+        <table class="w-full border-collapse">
           <thead>
-            <tr><th>name</th><th>slack id</th><th>status</th><th>joined</th><th></th></tr>
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-500">Name</th>
+              <th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-500">Slack ID</th>
+              <th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-500">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-500">Joined</th>
+              <th class="px-4 py-3"></th>
+            </tr>
           </thead>
           <tbody>
             {users.map(u => (
               <tr>
-                <td>{u.display_name as string}</td>
-                <td class="muted mono">{u.slack_id as string}</td>
-                <td class={`status-${u.onboarding_status as string}`}>
+                <td class="border-t border-stone-200 px-4 py-3 text-sm font-bold text-slate-900">{u.display_name as string}</td>
+                <td class="border-t border-stone-200 px-4 py-3 font-mono text-xs text-slate-500">{u.slack_id as string}</td>
+                <td class={`border-t border-stone-200 px-4 py-3 text-sm font-black ${u.onboarding_status === 'approved' ? 'text-emerald-700' : u.onboarding_status === 'pending_review' ? 'text-amber-700' : u.onboarding_status === 'changes_requested' ? 'text-rose-700' : 'text-slate-500'}`}>
                   {statusLabel[u.onboarding_status as string] ?? u.onboarding_status as string}
                 </td>
-                <td class="muted">{new Date((u.created_at as number) * 1000).toLocaleDateString()}</td>
-                <td>
+                <td class="border-t border-stone-200 px-4 py-3 text-sm text-slate-500">{new Date((u.created_at as number) * 1000).toLocaleDateString()}</td>
+                <td class="border-t border-stone-200 px-4 py-3 text-right text-sm">
                   {u.onboarding_status === 'pending_review' && (
-                    <a href={`/admin/review/${u.slack_id}`}>review →</a>
+                    <a class="font-black text-sky-700 no-underline" href={`/admin/review/${u.slack_id}`}>Review</a>
                   )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
-  .page { max-width: 800px; margin: 0 auto; padding: 2.5rem 1.5rem; }
-  nav {
-    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem; font-style: italic;
-  }
-  nav a { color: #666; text-decoration: none; }
-  nav a:hover { color: #ccc; }
-  nav .logout { margin-left: auto; }
-  h1 { font-size: 1rem; font-weight: normal; font-style: italic; color: #888; margin-bottom: 1.25rem; }
-  .empty { font-size: 0.9rem; font-style: italic; color: #444; }
-  table { width: 100%; border-collapse: collapse; }
-  th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; font-weight: normal; padding: 0 0 0.5rem; text-align: left; }
-  td { padding: 0.65rem 0; border-top: 1px solid #1a1a1a; font-size: 0.875rem; }
-  td a { color: #888; text-decoration: none; font-style: italic; }
-  td a:hover { color: #ccc; }
-  .muted { color: #555; font-size: 0.8rem; }
-  .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
-  .status-approved { color: #5a7a5a; }
-  .status-pending_review { color: #7a7a4a; }
-  .status-changes_requested { color: #7a4a4a; }
-  .status-pending_submission { color: #555; }
-</style>

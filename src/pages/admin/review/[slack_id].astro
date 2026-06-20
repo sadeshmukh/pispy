@@ -1,4 +1,5 @@
 ---
+import '../../../styles/global.css';
 import { db } from '../../../lib/db';
 
 const { slack_id } = Astro.params;
@@ -29,118 +30,60 @@ const { rows: clues } = await db.execute({
     <title>pispy — review {user.display_name as string}</title>
   </head>
   <body>
-    <div class="page">
-      <nav>
-        <a href="/admin">← back</a>
-        <a href="/admin/users">users</a>
-        <a href="/admin/fields">fields</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+    <div class="mx-auto w-full max-w-4xl px-5 py-8">
+      <nav class="mb-8 flex flex-wrap items-center gap-2 rounded-lg border border-stone-300 bg-white/80 p-2 shadow-[0_8px_22px_rgba(15,23,42,0.06)]">
+        <a class="rounded-md px-3 py-2 text-sm font-black text-slate-900 no-underline hover:bg-amber-100" href="/admin">Back</a>
+        <a class="rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/admin/users">Users</a>
+        <a class="rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/admin/fields">Fields</a>
+        <a class="ml-auto rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/api/auth/logout">Log out</a>
       </nav>
 
-      <header>
-        {user.avatar_url && <img src={user.avatar_url as string} alt="" class="avatar" />}
+      <header class="mb-6 flex items-center gap-3">
+        {user.avatar_url && <img src={user.avatar_url as string} alt="" class="h-[52px] w-[52px] rounded-lg border-2 border-slate-900 object-cover" />}
         <div>
-          <h1>{user.display_name as string}</h1>
-          <p class="slack-id">{slack_id}</p>
+          <div class="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">Review submission</div>
+          <h1 class="m-0 text-4xl font-black leading-none text-slate-900">{user.display_name as string}</h1>
+          <p class="mt-2 font-mono text-xs text-slate-500">{slack_id}</p>
         </div>
       </header>
 
-      <div class="photos">
-        <div class="photo-wrap">
-          <p class="photo-label">badge</p>
-          <img src={`/api/photos/${slack_id}/badge`} alt="badge photo" class="photo" />
+      <div class="mb-5 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-lg border border-stone-300 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+          <p class="mb-2 mt-0 text-xs font-black uppercase tracking-wide text-slate-500">Badge</p>
+          <img src={`/api/photos/${slack_id}/badge`} alt="badge photo" class="aspect-[4/3] w-full rounded-md border-2 border-slate-900 object-cover" />
         </div>
-        <div class="photo-wrap">
-          <p class="photo-label">face</p>
-          <img src={`/api/photos/${slack_id}/face`} alt="face photo" class="photo" />
+        <div class="rounded-lg border border-stone-300 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+          <p class="mb-2 mt-0 text-xs font-black uppercase tracking-wide text-slate-500">Face</p>
+          <img src={`/api/photos/${slack_id}/face`} alt="face photo" class="aspect-[4/3] w-full rounded-md border-2 border-slate-900 object-cover" />
         </div>
       </div>
 
       {clues.length > 0 && (
-        <div class="clues">
-          <p class="section-label">clues</p>
+        <div class="mb-5 rounded-lg border border-stone-300 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+          <p class="mb-2 mt-0 text-xs font-black uppercase tracking-wide text-slate-500">Clues</p>
           {clues.map(c => (
-            <div class="clue">
-              <span class="clue-prompt">{c.prompt as string}</span>
-              <span class="clue-answer">{c.answer as string}</span>
+            <div class="grid gap-2 border-t border-stone-200 py-3 sm:grid-cols-[minmax(120px,0.8fr)_minmax(0,1.2fr)]">
+              <span class="text-sm font-black text-slate-500">{c.prompt as string}</span>
+              <span class="text-sm font-bold text-slate-900">{c.answer as string}</span>
             </div>
           ))}
         </div>
       )}
 
-      <div class="actions">
+      <div class="flex flex-wrap items-start gap-4">
         <form action="/api/admin/review" method="POST">
           <input type="hidden" name="slack_id" value={slack_id} />
           <input type="hidden" name="action" value="approve" />
-          <button type="submit" class="btn-approve">approve</button>
+          <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-md border-2 border-emerald-700 bg-emerald-100 px-5 py-3 text-sm font-black text-emerald-900 shadow-[4px_4px_0_rgba(15,23,42,0.16)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">Approve</button>
         </form>
 
-        <form action="/api/admin/review" method="POST" class="changes-form">
+        <form action="/api/admin/review" method="POST" class="flex min-w-72 flex-1 flex-col gap-2">
           <input type="hidden" name="slack_id" value={slack_id} />
           <input type="hidden" name="action" value="request_changes" />
-          <textarea name="note" placeholder="what needs to change..." rows="3"></textarea>
-          <button type="submit" class="btn-changes">request changes</button>
+          <textarea class="min-h-24 rounded-md border-2 border-stone-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" name="note" placeholder="What needs to change..." rows="3"></textarea>
+          <button type="submit" class="inline-flex min-h-11 w-fit items-center justify-center rounded-md border-2 border-rose-400 bg-rose-50 px-5 py-3 text-sm font-black text-rose-800 shadow-[4px_4px_0_rgba(15,23,42,0.12)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">Request changes</button>
         </form>
       </div>
     </div>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
-  .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
-  nav {
-    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem; font-style: italic;
-  }
-  nav a { color: #666; text-decoration: none; }
-  nav a:hover { color: #ccc; }
-  nav .logout { margin-left: auto; }
-
-  header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
-  .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; filter: grayscale(20%); }
-  h1 { font-size: 1.1rem; font-weight: normal; font-style: italic; color: #ddd; margin-bottom: 0.15rem; }
-  .slack-id { font-size: 0.75rem; color: #555; font-family: ui-monospace, monospace; }
-
-  .photos { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
-  .photo-wrap {}
-  .photo-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #555; margin-bottom: 0.4rem; }
-  .photo {
-    width: 100%; aspect-ratio: 4/3;
-    object-fit: cover; display: block;
-    background: #161616; border: 1px solid #222;
-  }
-
-  .clues { margin-bottom: 2rem; }
-  .section-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 0.75rem; }
-  .clue { display: flex; gap: 1rem; padding: 0.5rem 0; border-top: 1px solid #1a1a1a; align-items: baseline; }
-  .clue-prompt { font-size: 0.75rem; color: #555; font-style: italic; min-width: 140px; }
-  .clue-answer { font-size: 0.875rem; color: #ccc; }
-
-  .actions { display: flex; gap: 2rem; align-items: flex-start; }
-  .changes-form { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
-  textarea {
-    background: #161616; border: 1px solid #2a2a2a;
-    color: #ccc; font-family: Georgia, serif; font-size: 0.85rem;
-    font-style: italic; padding: 0.5rem 0.65rem; resize: vertical;
-    outline: none;
-  }
-  textarea:focus { border-color: #444; }
-
-  .btn-approve {
-    background: none; border: 1px solid #3a5a3a; color: #5a8a5a;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
-    padding: 0.5rem 1.25rem; cursor: pointer; white-space: nowrap;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .btn-approve:hover { border-color: #5a8a5a; color: #7aaa7a; }
-  .btn-changes {
-    background: none; border: 1px solid #333; color: #888;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
-    padding: 0.5rem 1rem; cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .btn-changes:hover { border-color: #555; color: #bbb; }
-</style>

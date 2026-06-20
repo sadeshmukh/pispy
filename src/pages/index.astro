@@ -1,4 +1,5 @@
 ---
+import '../styles/global.css';
 import { getSession } from '../lib/auth';
 import { db } from '../lib/db';
 
@@ -27,41 +28,41 @@ if (session) {
     <title>pispy</title>
   </head>
   <body>
-    <main>
+    <main class="grid min-h-screen place-items-center px-6 py-10">
+      <section class="w-full max-w-md rounded-lg border-2 border-slate-900 bg-white p-8 shadow-[10px_10px_0_#ffd166]">
+        <div class="mb-4 flex items-center gap-3 text-xs font-black uppercase tracking-wide text-slate-500">
+          <span class="h-3 w-3 rounded-full bg-rose-500 shadow-[18px_0_0_#38bdf8,36px_0_0_#ffd166]"></span>
+          pispy
+        </div>
+
       {!session ? (
-        <a href="/api/auth/login">join</a>
+        <>
+          <h1 class="m-0 text-5xl font-black leading-none text-slate-900 sm:text-6xl">Find your people.</h1>
+          <p class="my-5 text-base leading-7 text-slate-600">
+            Join the campus photo clue game and get set up in a couple quick steps.
+          </p>
+          <a href="/api/auth/login" class="inline-flex min-h-11 items-center justify-center rounded-md border-2 border-slate-900 bg-yellow-300 px-5 py-3 text-sm font-black text-slate-900 no-underline shadow-[4px_4px_0_rgba(15,23,42,0.2)] transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_rgba(15,23,42,0.22)]">
+            Join with Slack
+          </a>
+        </>
       ) : status === 'pending_review' ? (
-        <div class="status-block">
-          <p>under review</p>
-          <a href="/api/auth/logout">leave</a>
+        <div>
+          <h1 class="m-0 text-4xl font-black leading-none text-slate-900">You're in the queue.</h1>
+          <p class="my-5 text-base leading-7 text-slate-600">Your submission is waiting for review.</p>
+          <a href="/api/auth/logout" class="inline-flex min-h-10 items-center justify-center rounded-md border-2 border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 no-underline shadow-[3px_3px_0_rgba(15,23,42,0.12)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">
+            Log out
+          </a>
         </div>
       ) : (
-        <div class="status-block">
-          <p>{session.display_name}</p>
-          <a href="/api/auth/logout">leave</a>
+        <div>
+          <h1 class="m-0 text-4xl font-black leading-none text-slate-900">Hi, {session.display_name}.</h1>
+          <p class="my-5 text-base leading-7 text-slate-600">Your profile is ready.</p>
+          <a href="/api/auth/logout" class="inline-flex min-h-10 items-center justify-center rounded-md border-2 border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 no-underline shadow-[3px_3px_0_rgba(15,23,42,0.12)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">
+            Log out
+          </a>
         </div>
       )}
+      </section>
     </main>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 100%; height: 100%; background: #111; }
-  main {
-    width: 100%; height: 100vh;
-    display: flex; align-items: center; justify-content: center;
-  }
-  a, p {
-    color: #ccc;
-    font-family: Georgia, serif;
-    font-size: 1rem;
-    font-style: italic;
-    text-decoration: none;
-  }
-  a:hover { color: #fff; }
-  .status-block {
-    display: flex; flex-direction: column;
-    align-items: center; gap: 1.2rem;
-  }
-</style>

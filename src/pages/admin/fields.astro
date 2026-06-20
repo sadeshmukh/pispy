@@ -1,4 +1,5 @@
 ---
+import '../../styles/global.css';
 import { db } from '../../lib/db';
 
 const { rows: fields } = await db.execute(
@@ -14,119 +15,63 @@ const { rows: fields } = await db.execute(
     <title>pispy — fields</title>
   </head>
   <body>
-    <div class="page">
-      <nav>
-        <a href="/admin">review</a>
-        <a href="/admin/users">users</a>
-        <a href="/admin/fields">fields</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+    <div class="mx-auto w-full max-w-4xl px-5 py-8">
+      <nav class="mb-8 flex flex-wrap items-center gap-2 rounded-lg border border-stone-300 bg-white/80 p-2 shadow-[0_8px_22px_rgba(15,23,42,0.06)]">
+        <a class="rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/admin">Review</a>
+        <a class="rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/admin/users">Users</a>
+        <a class="rounded-md px-3 py-2 text-sm font-black text-slate-900 no-underline hover:bg-amber-100" href="/admin/fields">Fields</a>
+        <a class="ml-auto rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/api/auth/logout">Log out</a>
       </nav>
 
-      <h1>clue fields</h1>
-      <p class="sub">questions users answer during onboarding. these become clues others use to find them.</p>
+      <header class="mb-6">
+        <div class="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Admin</div>
+        <h1 class="m-0 text-4xl font-black leading-none text-slate-900">Clue fields</h1>
+        <p class="mt-3 max-w-2xl text-base leading-7 text-slate-600">Questions users answer during onboarding. These become clues others use to find them.</p>
+      </header>
 
       {fields.length > 0 && (
-        <table>
+        <div class="overflow-x-auto rounded-lg border border-stone-300 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+        <table class="w-full border-collapse">
           <thead>
-            <tr><th>order</th><th>prompt</th><th></th></tr>
+            <tr><th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-500">Order</th><th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-slate-500">Prompt</th><th class="px-4 py-3"></th></tr>
           </thead>
           <tbody>
             {fields.map(f => (
               <tr>
-                <td class="muted mono">{f.field_order as number}</td>
-                <td>
-                  <form action="/api/admin/fields" method="POST" class="inline-form">
+                <td class="border-t border-stone-200 px-4 py-3 font-mono text-xs text-slate-500">{f.field_order as number}</td>
+                <td class="border-t border-stone-200 px-4 py-3">
+                  <form action="/api/admin/fields" method="POST" class="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="action" value="update" />
                     <input type="hidden" name="id" value={f.id as number} />
-                    <input type="text" name="prompt" value={f.prompt as string} />
-                    <input type="number" name="field_order" value={f.field_order as number} class="order-input" />
-                    <button type="submit" class="btn-ghost">save</button>
+                    <input class="min-w-64 flex-1 rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" type="text" name="prompt" value={f.prompt as string} />
+                    <input class="w-20 rounded-md border-2 border-stone-300 bg-white px-3 py-2 font-mono text-xs text-slate-700 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" type="number" name="field_order" value={f.field_order as number} />
+                    <button type="submit" class="inline-flex min-h-9 items-center justify-center rounded-md border-2 border-stone-300 bg-white px-3 py-2 text-sm font-black text-slate-700">Save</button>
                   </form>
                 </td>
-                <td>
+                <td class="border-t border-stone-200 px-4 py-3 text-right">
                   <form action="/api/admin/fields" method="POST">
                     <input type="hidden" name="action" value="delete" />
                     <input type="hidden" name="id" value={f.id as number} />
-                    <button type="submit" class="btn-delete">remove</button>
+                    <button type="submit" class="inline-flex min-h-9 items-center justify-center rounded-md border-2 border-rose-200 bg-white px-3 py-2 text-sm font-black text-rose-700">Remove</button>
                   </form>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
-      {fields.length === 0 && <p class="empty">no fields yet</p>}
+      {fields.length === 0 && <p class="rounded-lg border border-stone-300 bg-white p-4 font-bold text-slate-600">No fields yet.</p>}
 
-      <div class="add-section">
-        <p class="add-label">add field</p>
-        <form action="/api/admin/fields" method="POST" class="add-form">
+      <div class="mt-6 border-t border-stone-300 pt-5">
+        <p class="mb-3 text-xs font-black uppercase tracking-wide text-slate-500">Add field</p>
+        <form action="/api/admin/fields" method="POST" class="flex flex-wrap gap-3">
           <input type="hidden" name="action" value="create" />
-          <input type="text" name="prompt" placeholder="e.g. what do you usually wear?" required />
-          <button type="submit" class="btn-add">add</button>
+          <input class="min-w-64 flex-1 rounded-md border-2 border-stone-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" type="text" name="prompt" placeholder="e.g. what do you usually wear?" required />
+          <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-md border-2 border-slate-900 bg-yellow-300 px-5 py-3 text-sm font-black text-slate-900 shadow-[4px_4px_0_rgba(15,23,42,0.2)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">Add</button>
         </form>
       </div>
     </div>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
-  .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
-  nav {
-    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem; font-style: italic;
-  }
-  nav a { color: #666; text-decoration: none; }
-  nav a:hover { color: #ccc; }
-  nav .logout { margin-left: auto; }
-  h1 { font-size: 1rem; font-weight: normal; font-style: italic; color: #888; margin-bottom: 0.4rem; }
-  .sub { font-size: 0.8rem; color: #555; font-style: italic; margin-bottom: 1.75rem; }
-
-  table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
-  th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; font-weight: normal; padding: 0 0 0.5rem; text-align: left; }
-  td { padding: 0.5rem 0; border-top: 1px solid #1a1a1a; vertical-align: middle; }
-  .muted { color: #555; font-size: 0.8rem; }
-  .mono { font-family: ui-monospace, monospace; }
-
-  .inline-form { display: flex; gap: 0.5rem; align-items: center; }
-  input[type="text"] {
-    background: #161616; border: 1px solid #2a2a2a; color: #ccc;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
-    padding: 0.35rem 0.6rem; outline: none; flex: 1;
-  }
-  input[type="text"]:focus { border-color: #444; }
-  .order-input {
-    background: #161616; border: 1px solid #2a2a2a; color: #555;
-    font-family: ui-monospace, monospace; font-size: 0.75rem;
-    padding: 0.35rem 0.4rem; outline: none; width: 52px; flex: none;
-  }
-  input[type="number"] { -moz-appearance: textfield; }
-
-  .btn-ghost {
-    background: none; border: none; color: #555; font-family: Georgia, serif;
-    font-size: 0.8rem; font-style: italic; cursor: pointer; padding: 0.2rem 0;
-    white-space: nowrap;
-  }
-  .btn-ghost:hover { color: #999; }
-  .btn-delete {
-    background: none; border: none; color: #5a3a3a; font-family: Georgia, serif;
-    font-size: 0.8rem; font-style: italic; cursor: pointer; padding: 0.2rem 0;
-  }
-  .btn-delete:hover { color: #aa6a6a; }
-
-  .empty { font-size: 0.9rem; font-style: italic; color: #444; margin-bottom: 2rem; }
-
-  .add-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #1e1e1e; }
-  .add-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 0.75rem; }
-  .add-form { display: flex; gap: 0.75rem; }
-  .btn-add {
-    background: none; border: 1px solid #333; color: #888;
-    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
-    padding: 0.35rem 1rem; cursor: pointer; white-space: nowrap;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .btn-add:hover { border-color: #555; color: #ccc; }
-</style>
