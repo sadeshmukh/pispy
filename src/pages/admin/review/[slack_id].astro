@@ -1,0 +1,146 @@
+---
+import { db } from '../../../lib/db';
+
+const { slack_id } = Astro.params;
+
+const { rows } = await db.execute({
+  sql: 'SELECT display_name, avatar_url, onboarding_status FROM users WHERE slack_id = ?',
+  args: [slack_id!],
+});
+if (!rows[0]) return Astro.redirect('/admin');
+
+const user = rows[0];
+
+const { rows: clues } = await db.execute({
+  sql: `SELECT cf.prompt, uc.answer
+        FROM user_clues uc
+        JOIN clue_fields cf ON cf.id = uc.field_id
+        WHERE uc.slack_id = ?
+        ORDER BY cf.field_order, cf.id`,
+  args: [slack_id!],
+});
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>pispy — review {user.display_name as string}</title>
+  </head>
+  <body>
+    <div class="page">
+      <nav>
+        <a href="/admin">← back</a>
+        <a href="/admin/users">users</a>
+        <a href="/admin/fields">fields</a>
+        <a href="/api/auth/logout" class="logout">leave</a>
+      </nav>
+
+      <header>
+        {user.avatar_url && <img src={user.avatar_url as string} alt="" class="avatar" />}
+        <div>
+          <h1>{user.display_name as string}</h1>
+          <p class="slack-id">{slack_id}</p>
+        </div>
+      </header>
+
+      <div class="photos">
+        <div class="photo-wrap">
+          <p class="photo-label">badge</p>
+          <img src={`/api/photos/${slack_id}/badge`} alt="badge photo" class="photo" />
+        </div>
+        <div class="photo-wrap">
+          <p class="photo-label">face</p>
+          <img src={`/api/photos/${slack_id}/face`} alt="face photo" class="photo" />
+        </div>
+      </div>
+
+      {clues.length > 0 && (
+        <div class="clues">
+          <p class="section-label">clues</p>
+          {clues.map(c => (
+            <div class="clue">
+              <span class="clue-prompt">{c.prompt as string}</span>
+              <span class="clue-answer">{c.answer as string}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div class="actions">
+        <form action="/api/admin/review" method="POST">
+          <input type="hidden" name="slack_id" value={slack_id} />
+          <input type="hidden" name="action" value="approve" />
+          <button type="submit" class="btn-approve">approve</button>
+        </form>
+
+        <form action="/api/admin/review" method="POST" class="changes-form">
+          <input type="hidden" name="slack_id" value={slack_id} />
+          <input type="hidden" name="action" value="request_changes" />
+          <textarea name="note" placeholder="what needs to change..." rows="3"></textarea>
+          <button type="submit" class="btn-changes">request changes</button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+  .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+  nav {
+    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
+    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
+    font-size: 0.8rem; font-style: italic;
+  }
+  nav a { color: #666; text-decoration: none; }
+  nav a:hover { color: #ccc; }
+  nav .logout { margin-left: auto; }
+
+  header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+  .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; filter: grayscale(20%); }
+  h1 { font-size: 1.1rem; font-weight: normal; font-style: italic; color: #ddd; margin-bottom: 0.15rem; }
+  .slack-id { font-size: 0.75rem; color: #555; font-family: ui-monospace, monospace; }
+
+  .photos { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+  .photo-wrap {}
+  .photo-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #555; margin-bottom: 0.4rem; }
+  .photo {
+    width: 100%; aspect-ratio: 4/3;
+    object-fit: cover; display: block;
+    background: #161616; border: 1px solid #222;
+  }
+
+  .clues { margin-bottom: 2rem; }
+  .section-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 0.75rem; }
+  .clue { display: flex; gap: 1rem; padding: 0.5rem 0; border-top: 1px solid #1a1a1a; align-items: baseline; }
+  .clue-prompt { font-size: 0.75rem; color: #555; font-style: italic; min-width: 140px; }
+  .clue-answer { font-size: 0.875rem; color: #ccc; }
+
+  .actions { display: flex; gap: 2rem; align-items: flex-start; }
+  .changes-form { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+  textarea {
+    background: #161616; border: 1px solid #2a2a2a;
+    color: #ccc; font-family: Georgia, serif; font-size: 0.85rem;
+    font-style: italic; padding: 0.5rem 0.65rem; resize: vertical;
+    outline: none;
+  }
+  textarea:focus { border-color: #444; }
+
+  .btn-approve {
+    background: none; border: 1px solid #3a5a3a; color: #5a8a5a;
+    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
+    padding: 0.5rem 1.25rem; cursor: pointer; white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-approve:hover { border-color: #5a8a5a; color: #7aaa7a; }
+  .btn-changes {
+    background: none; border: 1px solid #333; color: #888;
+    font-family: Georgia, serif; font-size: 0.85rem; font-style: italic;
+    padding: 0.5rem 1rem; cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-changes:hover { border-color: #555; color: #bbb; }
+</style>

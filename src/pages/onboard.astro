@@ -1,0 +1,365 @@
+---
+import { getSession } from '../lib/auth';
+import { db } from '../lib/db';
+
+const session = getSession(Astro.cookies);
+if (!session) return Astro.redirect('/');
+
+const { rows: userRows } = await db.execute({
+  sql: 'SELECT onboarding_status, review_note FROM users WHERE slack_id = ?',
+  args: [session.slack_id],
+});
+const user = userRows[0];
+const status = user?.onboarding_status as string;
+const reviewNote = user?.review_note as string | null;
+
+if (status === 'approved' || status === 'pending_review') {
+  return Astro.redirect('/');
+}
+
+const { rows: fieldRows } = await db.execute(
+  'SELECT id, prompt FROM clue_fields ORDER BY field_order, id'
+);
+
+const { rows: clueRows } = await db.execute({
+  sql: 'SELECT field_id, answer FROM user_clues WHERE slack_id = ?',
+  args: [session.slack_id],
+});
+const existingClues: Record<string, string> = Object.fromEntries(
+  clueRows.map(r => [String(r.field_id), r.answer as string])
+);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>pispy — setup</title>
+  </head>
+  <body>
+    <div class="page">
+      {reviewNote && (
+        <div class="note">
+          <span class="note-label">changes requested</span>
+          <p>{reviewNote}</p>
+        </div>
+      )}
+
+      <header>
+        {session.avatar_url && <img src={session.avatar_url} alt="" class="avatar" />}
+        <span class="name">{session.display_name}</span>
+      </header>
+
+      <form id="onboard-form" action="/api/onboard" method="POST" enctype="multipart/form-data">
+        <div class="section">
+          <label>badge photo</label>
+          <p class="hint">a photo of your ID or badge</p>
+          <div class="photo-field" id="badge-field">
+            <div class="photo-preview-wrap">
+              <img id="badge-preview" class="photo-preview" hidden alt="" />
+              <video id="badge-video" class="photo-video" autoplay playsinline muted hidden></video>
+              <canvas id="badge-canvas" hidden></canvas>
+            </div>
+            <div class="photo-actions">
+              <label class="btn-outline">
+                upload file
+                <input type="file" id="badge-file" accept="image/*" hidden>
+              </label>
+              <span class="or">or</span>
+              <button type="button" class="btn-outline" id="badge-camera-open">use camera</button>
+              <button type="button" class="btn-outline" id="badge-snap" hidden>snap</button>
+              <button type="button" class="btn-ghost" id="badge-retake" hidden>retake</button>
+            </div>
+            <input type="hidden" name="badge_photo_data" id="badge-data" />
+            <input type="file" name="badge_photo_file" id="badge-file-fallback" accept="image/*" class="fallback-file" />
+          </div>
+        </div>
+
+        <div class="section">
+          <label>face photo</label>
+          <p class="hint">a clear photo of your face</p>
+          <div class="photo-field" id="face-field">
+            <div class="photo-preview-wrap">
+              <img id="face-preview" class="photo-preview" hidden alt="" />
+              <video id="face-video" class="photo-video" autoplay playsinline muted hidden></video>
+              <canvas id="face-canvas" hidden></canvas>
+            </div>
+            <div class="photo-actions">
+              <label class="btn-outline">
+                upload file
+                <input type="file" id="face-file" accept="image/*" hidden>
+              </label>
+              <span class="or">or</span>
+              <button type="button" class="btn-outline" id="face-camera-open">use camera</button>
+              <button type="button" class="btn-outline" id="face-snap" hidden>snap</button>
+              <button type="button" class="btn-ghost" id="face-retake" hidden>retake</button>
+            </div>
+            <input type="hidden" name="face_photo_data" id="face-data" />
+            <input type="file" name="face_photo_file" id="face-file-fallback" accept="image/*" class="fallback-file" />
+          </div>
+        </div>
+
+        {fieldRows.length > 0 && (
+          <div class="clues-section">
+            <p class="section-title">clues</p>
+            {fieldRows.map(field => (
+              <div class="section">
+                <label for={`field-${field.id}`}>{field.prompt as string}</label>
+                <input
+                  type="text"
+                  id={`field-${field.id}`}
+                  name={`clue_${field.id}`}
+                  value={existingClues[String(field.id)] ?? ''}
+                  autocomplete="off"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div class="submit-row">
+          <button type="submit" class="btn-submit">submit for review</button>
+        </div>
+      </form>
+    </div>
+
+    <script>
+      function setupPhotoField(id: string) {
+        const fileInput = document.getElementById(`${id}-file`) as HTMLInputElement;
+        const fileFallback = document.getElementById(`${id}-file-fallback`) as HTMLInputElement;
+        const dataInput = document.getElementById(`${id}-data`) as HTMLInputElement;
+        const preview = document.getElementById(`${id}-preview`) as HTMLImageElement;
+        const video = document.getElementById(`${id}-video`) as HTMLVideoElement;
+        const canvas = document.getElementById(`${id}-canvas`) as HTMLCanvasElement;
+        const cameraOpen = document.getElementById(`${id}-camera-open`) as HTMLButtonElement;
+        const snapBtn = document.getElementById(`${id}-snap`) as HTMLButtonElement;
+        const retakeBtn = document.getElementById(`${id}-retake`) as HTMLButtonElement;
+
+        let stream: MediaStream | null = null;
+
+        function showPreview(dataUrl: string) {
+          preview.src = dataUrl;
+          preview.hidden = false;
+          video.hidden = true;
+          snapBtn.hidden = true;
+          retakeBtn.hidden = false;
+          cameraOpen.hidden = true;
+          // hide fallback file input when JS-captured
+          fileFallback.disabled = true;
+        }
+
+        fileInput.addEventListener('change', () => {
+          const file = fileInput.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = e => {
+            const result = e.target?.result as string;
+            dataInput.value = result;
+            fileFallback.disabled = true;
+            showPreview(result);
+            stopStream();
+          };
+          reader.readAsDataURL(file);
+        });
+
+        cameraOpen.addEventListener('click', async () => {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            video.srcObject = stream;
+            video.hidden = false;
+            preview.hidden = true;
+            snapBtn.hidden = false;
+            cameraOpen.hidden = true;
+          } catch {
+            alert('Could not access camera. Please upload a file instead.');
+          }
+        });
+
+        snapBtn.addEventListener('click', () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext('2d')!.drawImage(video, 0, 0);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          dataInput.value = dataUrl;
+          fileFallback.disabled = true;
+          showPreview(dataUrl);
+          stopStream();
+        });
+
+        retakeBtn.addEventListener('click', () => {
+          dataInput.value = '';
+          preview.hidden = true;
+          retakeBtn.hidden = true;
+          cameraOpen.hidden = false;
+          fileFallback.disabled = false;
+        });
+
+        function stopStream() {
+          stream?.getTracks().forEach(t => t.stop());
+          stream = null;
+          video.hidden = true;
+        }
+      }
+
+      setupPhotoField('badge');
+      setupPhotoField('face');
+
+      // hide fallback file inputs (they're JS-only fallback for no-JS)
+      document.querySelectorAll('.fallback-file').forEach(el => {
+        (el as HTMLElement).style.display = 'none';
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+
+  .page {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+  }
+
+  .note {
+    border-left: 2px solid #555;
+    padding: 0.75rem 1rem;
+    margin-bottom: 2rem;
+    background: #161616;
+  }
+  .note-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: #666;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+  .note p { font-size: 0.9rem; font-style: italic; color: #bbb; }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+  .avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    filter: grayscale(30%);
+  }
+  .name { font-style: italic; font-size: 1.1rem; color: #ddd; }
+
+  .section {
+    margin-bottom: 1.75rem;
+  }
+  .section > label {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 0.4rem;
+  }
+  .hint {
+    font-size: 0.8rem;
+    color: #555;
+    font-style: italic;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #444;
+    margin-bottom: 1.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #1e1e1e;
+  }
+  .clues-section { margin-bottom: 1.75rem; }
+
+  input[type="text"] {
+    width: 100%;
+    background: #161616;
+    border: 1px solid #2a2a2a;
+    border-radius: 0;
+    color: #ccc;
+    font-family: Georgia, serif;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.65rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus { border-color: #555; }
+
+  .photo-field { }
+  .photo-preview-wrap {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #161616;
+    border: 1px solid #222;
+    margin-bottom: 0.6rem;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .photo-preview, .photo-video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .photo-preview[hidden], .photo-video[hidden] { display: none; }
+
+  .photo-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .or { font-size: 0.75rem; color: #444; font-style: italic; }
+
+  .btn-outline {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    font-family: Georgia, serif;
+    font-size: 0.8rem;
+    font-style: italic;
+    padding: 0.35rem 0.8rem;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-outline:hover { color: #ccc; border-color: #555; }
+  .btn-ghost {
+    background: none;
+    border: none;
+    color: #555;
+    font-family: Georgia, serif;
+    font-size: 0.8rem;
+    font-style: italic;
+    cursor: pointer;
+    padding: 0.35rem 0;
+  }
+  .btn-ghost:hover { color: #888; }
+
+  .submit-row { margin-top: 2.5rem; }
+  .btn-submit {
+    background: none;
+    border: 1px solid #444;
+    color: #ccc;
+    font-family: Georgia, serif;
+    font-size: 0.9rem;
+    font-style: italic;
+    padding: 0.6rem 2rem;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-submit:hover { color: #fff; border-color: #888; }
+
+  .fallback-file { display: none; }
+</style>
