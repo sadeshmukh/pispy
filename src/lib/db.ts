@@ -31,5 +31,19 @@ export async function initDb() {
       answer TEXT NOT NULL,
       PRIMARY KEY (slack_id, field_id)
     );
+    CREATE TABLE IF NOT EXISTS assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      hunter_id TEXT NOT NULL UNIQUE,
+      target_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'assigned',
+      started_at INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE IF NOT EXISTS clue_releases (
+      assignment_id INTEGER NOT NULL,
+      field_id INTEGER NOT NULL,
+      released_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (assignment_id, field_id)
+    );
   `);
 }

@@ -34,6 +34,8 @@ const { rows: clues } = await db.execute({
         <a href="/admin">← back</a>
         <a href="/admin/users">users</a>
         <a href="/admin/fields">fields</a>
+        <a href="/admin/assignments">assignments</a>
+        <a href={`/admin/inspect/${slack_id}`}>inspect</a>
         <a href="/api/auth/logout" class="logout">leave</a>
       </nav>
 

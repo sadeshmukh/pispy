@@ -1,0 +1,173 @@
+---
+import { getSession } from '../lib/auth';
+import { db } from '../lib/db';
+import {
+  getAssignmentForHunter,
+  getTargetClues,
+  getReleasedFieldIds,
+  syncClueReleases,
+  secondsUntilNextClue,
+} from '../lib/hunt';
+
+const session = getSession(Astro.cookies);
+if (!session) return Astro.redirect('/');
+
+const { rows } = await db.execute({
+  sql: 'SELECT onboarding_status FROM users WHERE slack_id = ?',
+  args: [session.slack_id],
+});
+const status = rows[0]?.onboarding_status as string | undefined;
+if (status === 'pending_submission' || status === 'changes_requested') {
+  return Astro.redirect('/onboard');
+}
+if (status !== 'approved') return Astro.redirect('/');
+
+const assignment = await getAssignmentForHunter(session.slack_id);
+
+// Catch the released set up to where elapsed time says it should be, so the
+// drip stays current even without a scheduled job poking it.
+if (assignment) await syncClueReleases(assignment);
+
+const allClues = assignment ? await getTargetClues(assignment.target_id) : [];
+const released = assignment ? await getReleasedFieldIds(assignment.id) : new Set<number>();
+const revealedClues = allClues.filter(c => released.has(c.id));
+
+let nextInSeconds: number | null = null;
+if (assignment?.status === 'active' && assignment.started_at) {
+  nextInSeconds = secondsUntilNextClue(assignment.started_at, allClues.length, revealedClues.length);
+}
+
+function fmtCountdown(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}m ${String(s).padStart(2, '0')}s`;
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>pispy — hunt</title>
+  </head>
+  <body>
+    <div class="page">
+      <nav>
+        <a href="/">home</a>
+        <a href="/api/auth/logout" class="logout">leave</a>
+      </nav>
+
+      {!assignment ? (
+        <div class="empty-state">
+          <p class="lead">no target yet</p>
+          <p class="sub">sit tight — you'll be assigned someone to find.</p>
+        </div>
+      ) : assignment.status === 'assigned' ? (
+        <div class="empty-state">
+          <p class="lead">a target awaits</p>
+          <p class="sub">someone out there is yours to find. start whenever you're ready — the clues begin once you do.</p>
+          <form action="/api/hunt/start" method="POST">
+            <button type="submit" class="btn-start">start the hunt</button>
+          </form>
+        </div>
+      ) : (
+        <div class="hunt">
+          <header>
+            <h1>the hunt is on</h1>
+            <p class="sub">clues about your target arrive every 15 minutes. piece them together.</p>
+          </header>
+
+          {revealedClues.length === 0 ? (
+            <p class="empty">no clues yet — hang tight.</p>
+          ) : (
+            <div class="clues">
+              {revealedClues.map((c, i) => (
+                <div class="clue">
+                  <span class="clue-num">{String(i + 1).padStart(2, '0')}</span>
+                  <div>
+                    <span class="clue-prompt">{c.prompt}</span>
+                    <span class="clue-answer">{c.answer}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div class="meta">
+            <span>{revealedClues.length} of {allClues.length} clues</span>
+            {nextInSeconds !== null && (
+              <span data-countdown={nextInSeconds}>next clue in {fmtCountdown(nextInSeconds)}</span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+
+    <script>
+      // Soft auto-refresh: when the next clue is due, reload to pull it in.
+      const el = document.querySelector('[data-countdown]') as HTMLElement | null;
+      if (el) {
+        let remaining = parseInt(el.dataset.countdown ?? '0', 10);
+        const tick = () => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            location.reload();
+            return;
+          }
+          const m = Math.floor(remaining / 60);
+          const s = remaining % 60;
+          el.textContent = `next clue in ${m}m ${String(s).padStart(2, '0')}s`;
+        };
+        setInterval(tick, 1000);
+      }
+    </script>
+  </body>
+</html>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #111; color: #ccc; font-family: Georgia, serif; }
+  .page { max-width: 560px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+  nav {
+    display: flex; gap: 1.5rem; margin-bottom: 3rem;
+    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
+    font-size: 0.8rem; font-style: italic;
+  }
+  nav a { color: #666; text-decoration: none; }
+  nav a:hover { color: #ccc; }
+  nav .logout { margin-left: auto; }
+
+  .empty-state { text-align: center; padding: 3rem 0; }
+  .lead { font-size: 1.3rem; font-style: italic; color: #ddd; margin-bottom: 0.6rem; }
+  .sub { font-size: 0.9rem; color: #666; font-style: italic; margin-bottom: 2rem; line-height: 1.5; }
+
+  header { margin-bottom: 2rem; }
+  h1 { font-size: 1.3rem; font-weight: normal; font-style: italic; color: #ddd; margin-bottom: 0.5rem; }
+  header .sub { margin-bottom: 0; }
+
+  .btn-start {
+    background: none; border: 1px solid #444; color: #ccc;
+    font-family: Georgia, serif; font-size: 0.95rem; font-style: italic;
+    padding: 0.6rem 2rem; cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-start:hover { color: #fff; border-color: #888; }
+
+  .empty { font-size: 0.9rem; font-style: italic; color: #444; }
+  .clues { display: flex; flex-direction: column; }
+  .clue {
+    display: flex; gap: 1rem; align-items: baseline;
+    padding: 1rem 0; border-top: 1px solid #1a1a1a;
+  }
+  .clue-num { font-family: ui-monospace, monospace; font-size: 0.7rem; color: #444; }
+  .clue-prompt { display: block; font-size: 0.75rem; color: #666; font-style: italic; margin-bottom: 0.3rem; }
+  .clue-answer { display: block; font-size: 1rem; color: #ddd; }
+
+  .meta {
+    display: flex; justify-content: space-between;
+    margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #1e1e1e;
+    font-size: 0.75rem; color: #555; font-style: italic;
+  }
+</style>

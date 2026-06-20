@@ -26,6 +26,7 @@ const statusLabel: Record<string, string> = {
         <a href="/admin">review</a>
         <a href="/admin/users">users</a>
         <a href="/admin/fields">fields</a>
+        <a href="/admin/assignments">assignments</a>
         <a href="/api/auth/logout" class="logout">leave</a>
       </nav>
 
@@ -47,10 +48,11 @@ const statusLabel: Record<string, string> = {
                   {statusLabel[u.onboarding_status as string] ?? u.onboarding_status as string}
                 </td>
                 <td class="muted">{new Date((u.created_at as number) * 1000).toLocaleDateString()}</td>
-                <td>
+                <td class="row-links">
                   {u.onboarding_status === 'pending_review' && (
-                    <a href={`/admin/review/${u.slack_id}`}>review →</a>
+                    <a href={`/admin/review/${u.slack_id}`}>review</a>
                   )}
+                  <a href={`/admin/inspect/${u.slack_id}`}>inspect →</a>
                 </td>
               </tr>
             ))}
@@ -86,4 +88,5 @@ const statusLabel: Record<string, string> = {
   .status-pending_review { color: #7a7a4a; }
   .status-changes_requested { color: #7a4a4a; }
   .status-pending_submission { color: #555; }
+  .row-links { display: flex; gap: 1rem; justify-content: flex-end; }
 </style>
