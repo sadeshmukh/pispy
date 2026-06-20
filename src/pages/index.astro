@@ -1,9 +1,11 @@
 ---
 import '../styles/global.css';
-import { getSession } from '../lib/auth';
+import { getSession, isAdmin } from '../lib/auth';
 import { db } from '../lib/db';
 
 const session = getSession(Astro.cookies);
+const adminDenied = Astro.url.searchParams.get('admin') === 'denied';
+const userIsAdmin = session ? isAdmin(session.slack_id) : false;
 
 let status: string | null = null;
 if (session) {
@@ -13,7 +15,7 @@ if (session) {
   });
   status = rows[0]?.onboarding_status as string ?? null;
 
-  if (status === 'pending_submission' || status === 'changes_requested') {
+  if (!adminDenied && (status === 'pending_submission' || status === 'changes_requested')) {
     return Astro.redirect('/onboard');
   }
 }
@@ -35,6 +37,19 @@ if (session) {
           pispy
         </div>
 
+      {adminDenied && (
+        <div class="mb-5 rounded-lg border-2 border-rose-400 bg-rose-50 p-4">
+          <p class="m-0 text-sm font-black text-rose-700">Admin access denied</p>
+          {session ? (
+            <p class="mt-2 text-sm leading-6 text-slate-700">
+              This session is signed in as Slack ID <span class="font-mono text-xs font-black">{session.slack_id}</span>. Add that exact ID to <span class="font-mono text-xs font-black">ADMIN_USERS</span>, then restart the dev server and log in again.
+            </p>
+          ) : (
+            <p class="mt-2 text-sm leading-6 text-slate-700">Log in with Slack first, then try the admin page again.</p>
+          )}
+        </div>
+      )}
+
       {!session ? (
         <>
           <h1 class="m-0 text-5xl font-black leading-none text-slate-900 sm:text-6xl">Find your people.</h1>
@@ -52,6 +67,11 @@ if (session) {
           <a href="/api/auth/logout" class="inline-flex min-h-10 items-center justify-center rounded-md border-2 border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 no-underline shadow-[3px_3px_0_rgba(15,23,42,0.12)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">
             Log out
           </a>
+          {userIsAdmin && (
+            <a href="/admin" class="ml-3 inline-flex min-h-10 items-center justify-center rounded-md border-2 border-slate-900 bg-yellow-300 px-4 py-2 text-sm font-black text-slate-900 no-underline shadow-[3px_3px_0_rgba(15,23,42,0.16)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">
+              Admin
+            </a>
+          )}
         </div>
       ) : (
         <div>
@@ -60,6 +80,11 @@ if (session) {
           <a href="/api/auth/logout" class="inline-flex min-h-10 items-center justify-center rounded-md border-2 border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 no-underline shadow-[3px_3px_0_rgba(15,23,42,0.12)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">
             Log out
           </a>
+          {userIsAdmin && (
+            <a href="/admin" class="ml-3 inline-flex min-h-10 items-center justify-center rounded-md border-2 border-slate-900 bg-yellow-300 px-4 py-2 text-sm font-black text-slate-900 no-underline shadow-[3px_3px_0_rgba(15,23,42,0.16)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">
+              Admin
+            </a>
+          )}
         </div>
       )}
       </section>

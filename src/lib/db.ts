@@ -31,5 +31,13 @@ export async function initDb() {
       answer TEXT NOT NULL,
       PRIMARY KEY (slack_id, field_id)
     );
+    CREATE TABLE IF NOT EXISTS user_onboarding_answers (
+      slack_id TEXT NOT NULL,
+      question_key TEXT NOT NULL,
+      answer TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (slack_id, question_key)
+    );
   `);
 }

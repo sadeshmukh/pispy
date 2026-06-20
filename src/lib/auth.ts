@@ -18,8 +18,9 @@ export function getSession(cookies: AstroCookies): Session | null {
 
 export function isAdmin(slack_id: string): boolean {
   return (import.meta.env.ADMIN_USERS ?? '')
-    .split(',')
+    .split(/[\s,;]+/)
     .map((s: string) => s.trim())
+    .map((s: string) => s.replace(/^["']|["']$/g, ''))
     .filter(Boolean)
-    .includes(slack_id);
+    .some((adminId: string) => adminId.toUpperCase() === slack_id.toUpperCase());
 }

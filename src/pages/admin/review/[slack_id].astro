@@ -1,25 +1,32 @@
 ---
 import '../../../styles/global.css';
 import { db } from '../../../lib/db';
+import { optionalOnboardingQuestions, requiredOnboardingQuestions } from '../../../lib/onboardingQuestions';
 
 const { slack_id } = Astro.params;
 
 const { rows } = await db.execute({
-  sql: 'SELECT display_name, avatar_url, onboarding_status FROM users WHERE slack_id = ?',
+  sql: 'SELECT display_name, avatar_url, onboarding_status, review_note FROM users WHERE slack_id = ?',
   args: [slack_id!],
 });
 if (!rows[0]) return Astro.redirect('/admin');
 
 const user = rows[0];
 
-const { rows: clues } = await db.execute({
-  sql: `SELECT cf.prompt, uc.answer
-        FROM user_clues uc
-        JOIN clue_fields cf ON cf.id = uc.field_id
-        WHERE uc.slack_id = ?
-        ORDER BY cf.field_order, cf.id`,
+const { rows: answerRows } = await db.execute({
+  sql: 'SELECT question_key, answer FROM user_onboarding_answers WHERE slack_id = ?',
   args: [slack_id!],
 });
+const answers: Record<string, string> = Object.fromEntries(
+  answerRows.map(row => [String(row.question_key), row.answer as string])
+);
+
+const statusLabel: Record<string, string> = {
+  pending_submission: 'not submitted',
+  pending_review: 'pending review',
+  approved: 'approved',
+  changes_requested: 'changes requested',
+};
 ---
 
 <!doctype html>
@@ -27,14 +34,13 @@ const { rows: clues } = await db.execute({
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>pispy — review {user.display_name as string}</title>
+    <title>pispy - review {user.display_name as string}</title>
   </head>
   <body>
     <div class="mx-auto w-full max-w-4xl px-5 py-8">
       <nav class="mb-8 flex flex-wrap items-center gap-2 rounded-lg border border-stone-300 bg-white/80 p-2 shadow-[0_8px_22px_rgba(15,23,42,0.06)]">
         <a class="rounded-md px-3 py-2 text-sm font-black text-slate-900 no-underline hover:bg-amber-100" href="/admin">Back</a>
         <a class="rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/admin/users">Users</a>
-        <a class="rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/admin/fields">Fields</a>
         <a class="ml-auto rounded-md px-3 py-2 text-sm font-bold text-slate-600 no-underline hover:bg-amber-100 hover:text-slate-900" href="/api/auth/logout">Log out</a>
       </nav>
 
@@ -44,27 +50,41 @@ const { rows: clues } = await db.execute({
           <div class="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">Review submission</div>
           <h1 class="m-0 text-4xl font-black leading-none text-slate-900">{user.display_name as string}</h1>
           <p class="mt-2 font-mono text-xs text-slate-500">{slack_id}</p>
+          <p class={`mt-2 text-sm font-black ${user.onboarding_status === 'approved' ? 'text-emerald-700' : user.onboarding_status === 'pending_review' ? 'text-amber-700' : user.onboarding_status === 'changes_requested' ? 'text-rose-700' : 'text-slate-500'}`}>
+            {statusLabel[user.onboarding_status as string] ?? user.onboarding_status as string}
+          </p>
         </div>
       </header>
 
-      <div class="mb-5 grid gap-4 sm:grid-cols-2">
-        <div class="rounded-lg border border-stone-300 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-          <p class="mb-2 mt-0 text-xs font-black uppercase tracking-wide text-slate-500">Badge</p>
-          <img src={`/api/photos/${slack_id}/badge`} alt="badge photo" class="aspect-[4/3] w-full rounded-md border-2 border-slate-900 object-cover" />
+      {user.review_note && (
+        <div class="mb-5 rounded-lg border-2 border-rose-400 bg-rose-50 p-4">
+          <p class="mb-1 mt-0 text-xs font-black uppercase tracking-wide text-rose-700">Review note</p>
+          <p class="m-0 text-sm leading-6 text-slate-700">{user.review_note as string}</p>
         </div>
-        <div class="rounded-lg border border-stone-300 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-          <p class="mb-2 mt-0 text-xs font-black uppercase tracking-wide text-slate-500">Face</p>
-          <img src={`/api/photos/${slack_id}/face`} alt="face photo" class="aspect-[4/3] w-full rounded-md border-2 border-slate-900 object-cover" />
-        </div>
+      )}
+
+      <div class="mb-5 rounded-lg border border-stone-300 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+        <p class="mb-2 mt-0 text-xs font-black uppercase tracking-wide text-slate-500">Person with badge</p>
+        <img src={`/api/photos/${slack_id}/badge`} alt="person with badge photo" class="aspect-[4/3] w-full rounded-md border-2 border-slate-900 object-cover" />
       </div>
 
-      {clues.length > 0 && (
+      <div class="mb-5 rounded-lg border border-stone-300 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+        <p class="mb-2 mt-0 text-xs font-black uppercase tracking-wide text-slate-500">Required identifiers</p>
+        {requiredOnboardingQuestions.map(question => (
+          <div class="grid gap-2 border-t border-stone-200 py-3 sm:grid-cols-[minmax(160px,0.8fr)_minmax(0,1.2fr)]">
+            <span class="text-sm font-black text-slate-500">{question.label}</span>
+            <span class="text-sm font-bold text-slate-900">{answers[question.key] || 'No answer'}</span>
+          </div>
+        ))}
+      </div>
+
+      {optionalOnboardingQuestions.some(question => answers[question.key]) && (
         <div class="mb-5 rounded-lg border border-stone-300 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-          <p class="mb-2 mt-0 text-xs font-black uppercase tracking-wide text-slate-500">Clues</p>
-          {clues.map(c => (
-            <div class="grid gap-2 border-t border-stone-200 py-3 sm:grid-cols-[minmax(120px,0.8fr)_minmax(0,1.2fr)]">
-              <span class="text-sm font-black text-slate-500">{c.prompt as string}</span>
-              <span class="text-sm font-bold text-slate-900">{c.answer as string}</span>
+          <p class="mb-2 mt-0 text-xs font-black uppercase tracking-wide text-slate-500">Optional clues</p>
+          {optionalOnboardingQuestions.filter(question => answers[question.key]).map(question => (
+            <div class="grid gap-2 border-t border-stone-200 py-3 sm:grid-cols-[minmax(160px,0.8fr)_minmax(0,1.2fr)]">
+              <span class="text-sm font-black text-slate-500">{question.label}</span>
+              <span class="whitespace-pre-wrap text-sm font-bold text-slate-900">{answers[question.key]}</span>
             </div>
           ))}
         </div>

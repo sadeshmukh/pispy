@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import { getSession } from '../lib/auth';
 import { db } from '../lib/db';
+import { optionalOnboardingQuestions, requiredOnboardingQuestions } from '../lib/onboardingQuestions';
 
 const session = getSession(Astro.cookies);
 if (!session) return Astro.redirect('/');
@@ -18,17 +19,20 @@ if (status === 'approved' || status === 'pending_review') {
   return Astro.redirect('/');
 }
 
-const { rows: fieldRows } = await db.execute(
-  'SELECT id, prompt FROM clue_fields ORDER BY field_order, id'
-);
-
-const { rows: clueRows } = await db.execute({
-  sql: 'SELECT field_id, answer FROM user_clues WHERE slack_id = ?',
+const { rows: answerRows } = await db.execute({
+  sql: 'SELECT question_key, answer FROM user_onboarding_answers WHERE slack_id = ?',
   args: [session.slack_id],
 });
-const existingClues: Record<string, string> = Object.fromEntries(
-  clueRows.map(r => [String(r.field_id), r.answer as string])
+const existingAnswers: Record<string, string> = Object.fromEntries(
+  answerRows.map(r => [String(r.question_key), r.answer as string])
 );
+
+const error = Astro.url.searchParams.get('error');
+const errorMessage = error === 'missing_photo'
+  ? 'Please add a clear photo that shows you and your badge.'
+  : error === 'missing_answers'
+    ? 'Please answer every required question before submitting.'
+    : null;
 ---
 
 <!doctype html>
@@ -37,7 +41,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" href="/favicon.ico" />
-    <title>pispy — setup</title>
+    <title>pispy - setup</title>
   </head>
   <body>
     <div class="mx-auto w-full max-w-xl px-5 py-8 sm:py-12">
@@ -48,18 +52,25 @@ const existingClues: Record<string, string> = Object.fromEntries(
         </div>
       )}
 
+      {errorMessage && (
+        <div class="mb-4 rounded-lg border-2 border-rose-400 bg-rose-50 p-4">
+          <span class="text-xs font-black uppercase tracking-wide text-rose-700">Submission incomplete</span>
+          <p class="mt-2 text-sm leading-6 text-slate-700">{errorMessage}</p>
+        </div>
+      )}
+
       <header class="mb-5 flex items-center gap-3">
         {session.avatar_url && <img src={session.avatar_url} alt="" class="h-[52px] w-[52px] rounded-lg border-2 border-slate-900 object-cover" />}
         <div>
-          <div class="text-xs font-black uppercase tracking-wide text-slate-500">Set up your clues</div>
+          <div class="text-xs font-black uppercase tracking-wide text-slate-500">Set up your review</div>
           <span class="text-lg font-black text-slate-900">{session.display_name}</span>
         </div>
       </header>
 
       <form id="onboard-form" action="/api/onboard" method="POST" enctype="multipart/form-data">
         <div class="mb-4 rounded-lg border border-stone-300 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-          <label class="mb-1 block text-sm font-black text-slate-900">Badge photo</label>
-          <p class="mb-3 mt-0 text-sm text-slate-600">A photo of your ID or badge.</p>
+          <label class="mb-1 block text-sm font-black text-slate-900">Photo with badge</label>
+          <p class="mb-3 mt-0 text-sm text-slate-600">Upload a clear photo of yourself with your badge visible.</p>
           <div id="badge-field">
             <div class="mb-3 grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-lg border-2 border-dashed border-stone-400 bg-amber-50 bg-[linear-gradient(45deg,rgba(56,189,248,0.10)_25%,transparent_25%_50%,rgba(56,189,248,0.10)_50%_75%,transparent_75%)] [background-size:22px_22px]">
               <img id="badge-preview" class="block h-full w-full object-cover" hidden alt="" />
@@ -69,7 +80,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
             <div class="flex flex-wrap items-center gap-3">
               <label class="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-md border-2 border-slate-900 bg-white px-4 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_rgba(15,23,42,0.16)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">
                 Upload file
-                <input type="file" id="badge-file" accept="image/*" hidden>
+                <input type="file" id="badge-file" name="badge_photo_file" accept="image/*" hidden>
               </label>
               <span class="text-sm font-bold text-slate-500">or</span>
               <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-md border-2 border-slate-900 bg-white px-4 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_rgba(15,23,42,0.16)] transition hover:-translate-x-0.5 hover:-translate-y-0.5" id="badge-camera-open">Use camera</button>
@@ -77,52 +88,43 @@ const existingClues: Record<string, string> = Object.fromEntries(
               <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-md border-2 border-stone-300 bg-white px-4 py-2 text-sm font-black text-slate-700" id="badge-retake" hidden>Retake</button>
             </div>
             <input type="hidden" name="badge_photo_data" id="badge-data" />
-            <input type="file" name="badge_photo_file" id="badge-file-fallback" accept="image/*" class="hidden fallback-file" />
           </div>
         </div>
 
-        <div class="mb-4 rounded-lg border border-stone-300 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-          <label class="mb-1 block text-sm font-black text-slate-900">Face photo</label>
-          <p class="mb-3 mt-0 text-sm text-slate-600">A clear photo of your face.</p>
-          <div id="face-field">
-            <div class="mb-3 grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-lg border-2 border-dashed border-stone-400 bg-amber-50 bg-[linear-gradient(45deg,rgba(56,189,248,0.10)_25%,transparent_25%_50%,rgba(56,189,248,0.10)_50%_75%,transparent_75%)] [background-size:22px_22px]">
-              <img id="face-preview" class="block h-full w-full object-cover" hidden alt="" />
-              <video id="face-video" class="block h-full w-full object-cover" autoplay playsinline muted hidden></video>
-              <canvas id="face-canvas" hidden></canvas>
+        <div class="mb-4">
+          <p class="mb-3 mt-6 border-t border-stone-300 pt-4 text-xs font-black uppercase tracking-wide text-slate-500">Required identifiers</p>
+          {requiredOnboardingQuestions.map(question => (
+            <div class="mb-4 rounded-lg border border-stone-300 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+              <label class="mb-2 block text-sm font-black text-slate-900" for={`answer-${question.key}`}>{question.label}</label>
+              <input
+                class="w-full rounded-md border-2 border-stone-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                type="text"
+                id={`answer-${question.key}`}
+                name={`answer_${question.key}`}
+                value={existingAnswers[question.key] ?? ''}
+                placeholder={question.placeholder}
+                autocomplete="off"
+                required
+              />
             </div>
-            <div class="flex flex-wrap items-center gap-3">
-              <label class="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-md border-2 border-slate-900 bg-white px-4 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_rgba(15,23,42,0.16)] transition hover:-translate-x-0.5 hover:-translate-y-0.5">
-                Upload file
-                <input type="file" id="face-file" accept="image/*" hidden>
-              </label>
-              <span class="text-sm font-bold text-slate-500">or</span>
-              <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-md border-2 border-slate-900 bg-white px-4 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_rgba(15,23,42,0.16)] transition hover:-translate-x-0.5 hover:-translate-y-0.5" id="face-camera-open">Use camera</button>
-              <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-md border-2 border-slate-900 bg-white px-4 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_rgba(15,23,42,0.16)] transition hover:-translate-x-0.5 hover:-translate-y-0.5" id="face-snap" hidden>Snap</button>
-              <button type="button" class="inline-flex min-h-10 items-center justify-center rounded-md border-2 border-stone-300 bg-white px-4 py-2 text-sm font-black text-slate-700" id="face-retake" hidden>Retake</button>
-            </div>
-            <input type="hidden" name="face_photo_data" id="face-data" />
-            <input type="file" name="face_photo_file" id="face-file-fallback" accept="image/*" class="hidden fallback-file" />
-          </div>
+          ))}
         </div>
 
-        {fieldRows.length > 0 && (
-          <div class="mb-4">
-            <p class="mb-3 mt-6 border-t border-stone-300 pt-4 text-xs font-black uppercase tracking-wide text-slate-500">Clues</p>
-            {fieldRows.map(field => (
-              <div class="mb-4 rounded-lg border border-stone-300 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-                <label class="mb-2 block text-sm font-black text-slate-900" for={`field-${field.id}`}>{field.prompt as string}</label>
-                <input
-                  class="w-full rounded-md border-2 border-stone-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-                  type="text"
-                  id={`field-${field.id}`}
-                  name={`clue_${field.id}`}
-                  value={existingClues[String(field.id)] ?? ''}
-                  autocomplete="off"
-                />
-              </div>
-            ))}
-          </div>
-        )}
+        <div class="mb-4">
+          <p class="mb-3 mt-6 border-t border-stone-300 pt-4 text-xs font-black uppercase tracking-wide text-slate-500">Optional clues</p>
+          {optionalOnboardingQuestions.map(question => (
+            <div class="mb-4 rounded-lg border border-stone-300 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+              <label class="mb-2 block text-sm font-black text-slate-900" for={`answer-${question.key}`}>{question.label}</label>
+              <textarea
+                class="min-h-28 w-full rounded-md border-2 border-stone-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                id={`answer-${question.key}`}
+                name={`answer_${question.key}`}
+                placeholder={question.placeholder}
+                rows="4"
+              >{existingAnswers[question.key] ?? ''}</textarea>
+            </div>
+          ))}
+        </div>
 
         <div class="mt-8">
           <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-md border-2 border-slate-900 bg-yellow-300 px-5 py-3 text-sm font-black text-slate-900 shadow-[4px_4px_0_rgba(15,23,42,0.2)] transition hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_rgba(15,23,42,0.22)]">Submit for review</button>
@@ -133,7 +135,6 @@ const existingClues: Record<string, string> = Object.fromEntries(
     <script>
       function setupPhotoField(id: string) {
         const fileInput = document.getElementById(`${id}-file`) as HTMLInputElement;
-        const fileFallback = document.getElementById(`${id}-file-fallback`) as HTMLInputElement;
         const dataInput = document.getElementById(`${id}-data`) as HTMLInputElement;
         const preview = document.getElementById(`${id}-preview`) as HTMLImageElement;
         const video = document.getElementById(`${id}-video`) as HTMLVideoElement;
@@ -151,8 +152,6 @@ const existingClues: Record<string, string> = Object.fromEntries(
           snapBtn.hidden = true;
           retakeBtn.hidden = false;
           cameraOpen.hidden = true;
-          // hide fallback file input when JS-captured
-          fileFallback.disabled = true;
         }
 
         fileInput.addEventListener('change', () => {
@@ -162,7 +161,6 @@ const existingClues: Record<string, string> = Object.fromEntries(
           reader.onload = e => {
             const result = e.target?.result as string;
             dataInput.value = result;
-            fileFallback.disabled = true;
             showPreview(result);
             stopStream();
           };
@@ -188,17 +186,16 @@ const existingClues: Record<string, string> = Object.fromEntries(
           canvas.getContext('2d')!.drawImage(video, 0, 0);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           dataInput.value = dataUrl;
-          fileFallback.disabled = true;
           showPreview(dataUrl);
           stopStream();
         });
 
         retakeBtn.addEventListener('click', () => {
           dataInput.value = '';
+          fileInput.value = '';
           preview.hidden = true;
           retakeBtn.hidden = true;
           cameraOpen.hidden = false;
-          fileFallback.disabled = false;
         });
 
         function stopStream() {
@@ -209,12 +206,6 @@ const existingClues: Record<string, string> = Object.fromEntries(
       }
 
       setupPhotoField('badge');
-      setupPhotoField('face');
-
-      // hide fallback file inputs (they're JS-only fallback for no-JS)
-      document.querySelectorAll('.fallback-file').forEach(el => {
-        (el as HTMLElement).style.display = 'none';
-      });
     </script>
   </body>
 </html>

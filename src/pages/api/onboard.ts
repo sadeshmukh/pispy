@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../lib/db';
 import { getSession } from '../../lib/auth';
+import { onboardingQuestions, requiredOnboardingQuestions } from '../../lib/onboardingQuestions';
 
 function parsePhoto(dataUrl: string): { blob: Uint8Array; mime: string } | null {
   if (!dataUrl || !dataUrl.startsWith('data:')) return null;
@@ -24,7 +25,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const formData = await request.formData();
 
-  // resolve badge photo
   let badgeBlob: Uint8Array | null = null;
   let badgeMime: string | null = null;
 
@@ -39,23 +39,19 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     badgeMime = badgeFile.type || 'image/jpeg';
   }
 
-  // resolve face photo
-  let faceBlob: Uint8Array | null = null;
-  let faceMime: string | null = null;
-
-  const faceData = formData.get('face_photo_data') as string;
-  const faceFile = formData.get('face_photo_file') as File | null;
-
-  if (faceData) {
-    const parsed = parsePhoto(faceData);
-    if (parsed) { faceBlob = parsed.blob; faceMime = parsed.mime; }
-  } else if (faceFile && faceFile.size > 0) {
-    faceBlob = new Uint8Array(await faceFile.arrayBuffer());
-    faceMime = faceFile.type || 'image/jpeg';
+  if (!badgeBlob) {
+    return redirect('/onboard?error=missing_photo');
   }
 
-  if (!badgeBlob || !faceBlob) {
-    return redirect('/onboard?error=missing_photos');
+  const answers = new Map<string, string>();
+  for (const question of onboardingQuestions) {
+    const answer = ((formData.get(`answer_${question.key}`) as string | null) ?? '').trim();
+    if (answer) answers.set(question.key, answer);
+  }
+
+  const missingRequiredAnswer = requiredOnboardingQuestions.some(question => !answers.get(question.key));
+  if (missingRequiredAnswer) {
+    return redirect('/onboard?error=missing_answers');
   }
 
   await db.execute({
@@ -63,25 +59,21 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
             onboarding_status = 'pending_review',
             review_note = NULL,
             badge_photo = ?,
-            badge_photo_mime = ?,
-            face_photo = ?,
-            face_photo_mime = ?
+            badge_photo_mime = ?
           WHERE slack_id = ?`,
-    args: [badgeBlob, badgeMime, faceBlob, faceMime, session.slack_id],
+    args: [badgeBlob, badgeMime, session.slack_id],
   });
 
-  // upsert clue answers
-  const fieldIds = [...formData.keys()]
-    .filter(k => k.startsWith('clue_'))
-    .map(k => parseInt(k.slice(5)));
+  await db.execute({
+    sql: 'DELETE FROM user_onboarding_answers WHERE slack_id = ?',
+    args: [session.slack_id],
+  });
 
-  for (const fieldId of fieldIds) {
-    const answer = (formData.get(`clue_${fieldId}`) as string)?.trim();
-    if (!answer) continue;
+  for (const [questionKey, answer] of answers) {
     await db.execute({
-      sql: `INSERT INTO user_clues (slack_id, field_id, answer) VALUES (?, ?, ?)
-            ON CONFLICT (slack_id, field_id) DO UPDATE SET answer = excluded.answer`,
-      args: [session.slack_id, fieldId, answer],
+      sql: `INSERT INTO user_onboarding_answers (slack_id, question_key, answer, updated_at)
+            VALUES (?, ?, ?, unixepoch())`,
+      args: [session.slack_id, questionKey, answer],
     });
   }
 

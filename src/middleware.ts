@@ -15,7 +15,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     const session = getSession(context.cookies);
     if (!session || !isAdmin(session.slack_id)) {
-      return context.redirect('/');
+      return context.redirect('/?admin=denied');
     }
   }
 
