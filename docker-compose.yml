@@ -1,0 +1,32 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pispy-web
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    environment:
+      - NODE_ENV=production
+      - PORT=4321
+      - HOST=0.0.0.0
+    labels:
+      - "pangolin.proxy-resources.pispy.name=Pispy"
+      - "pangolin.proxy-resources.pispy.protocol=http"
+      - "pangolin.proxy-resources.pispy.targets[0].method=http"
+      - "pangolin.proxy-resources.pispy.targets[0].port=4321"
+
+  newt:
+    image: fosrl/newt:latest
+    container_name: pangolin-newt
+    restart: unless-stopped
+    environment:
+      - PANGOLIN_ENDPOINT=${PANGOLIN_ENDPOINT:-https://app.pangolin.net}
+      - NEWT_ID=${NEWT_ID}
+      - NEWT_SECRET=${NEWT_SECRET}
+      - DOCKER_SOCKET=/var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - web
