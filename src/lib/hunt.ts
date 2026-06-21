@@ -2,7 +2,7 @@ import { db } from "./db";
 import { notifyHuntStarted } from "./notify";
 
 // Scoring: a find starts from BASE_SCORE and loses points for how long the hunt
-// took. All clues are shown up front, so speed is the whole game — find your
+// took. All clues are shown up front, so speed is the whole game - find your
 // target fastest to win.
 export const BASE_SCORE = 1000;
 export const TIME_PENALTY_PER_HOUR = 50; // points lost per hour since the hunt started

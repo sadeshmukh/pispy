@@ -4,13 +4,13 @@ import { messages } from "./messages";
 
 // Same Slack wiring already used here: an App authed with the XOXB bot token,
 // DMing a user via app.channel(slackId).send(text). All message copy lives in
-// ./messages — this module only decides who gets told what, and when.
+// ./messages - this module only decides who gets told what, and when.
 const app = new App({
 	token: import.meta.env.XOXB,
 });
 
 // Send a DM, but never let a Slack hiccup break the game flow that triggered it
-// — a failed notification must not roll back a score, status change, etc.
+// - a failed notification must not roll back a score, status change, etc.
 async function dm(slackId: string, text: string): Promise<void> {
 	try {
 		await app.channel(slackId).send(text);

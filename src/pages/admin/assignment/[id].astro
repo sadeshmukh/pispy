@@ -39,7 +39,7 @@ const statusClass: Record<string, string> = {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>pispy — manage hunt</title>
+    <title>pispy - manage hunt</title>
   </head>
   <body class="bg-[#111] font-sans text-[#ccc]">
     <div class="mx-auto max-w-[700px] px-6 pt-10 pb-16">
@@ -71,11 +71,11 @@ const statusClass: Record<string, string> = {
               <img src={`/api/captures/${assignment.id}?cb=${cb}`} alt="submitted photo" class="block aspect-[4/3] w-full rounded border border-[#2a2a2a] bg-[#111] object-cover" />
             </div>
             <div>
-              <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.08em] text-[#888]">target — face</p>
+              <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.08em] text-[#888]">target - face</p>
               <img src={`/api/photos/${assignment.target_id}/face?cb=${cb}`} alt="target face" class="block aspect-[4/3] w-full rounded border border-[#2a2a2a] bg-[#111] object-cover" />
             </div>
             <div>
-              <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.08em] text-[#888]">target — badge</p>
+              <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.08em] text-[#888]">target - badge</p>
               <img src={`/api/photos/${assignment.target_id}/badge?cb=${cb}`} alt="target badge" class="block aspect-[4/3] w-full rounded border border-[#2a2a2a] bg-[#111] object-cover" />
             </div>
           </div>
@@ -83,7 +83,7 @@ const statusClass: Record<string, string> = {
             <form action="/api/admin/assignments" method="POST">
               <input type="hidden" name="action" value="approve_capture" />
               <input type="hidden" name="id" value={assignment.id} />
-              <button type="submit" class="cursor-pointer whitespace-nowrap rounded border border-[#3a5a3a] bg-none px-5 py-2 font-sans text-[0.85rem] text-[#7aaa7a] transition-colors hover:border-[#5a8a5a] hover:text-[#9aca9a]">confirm find — award {assignment.score} pts</button>
+              <button type="submit" class="cursor-pointer whitespace-nowrap rounded border border-[#3a5a3a] bg-none px-5 py-2 font-sans text-[0.85rem] text-[#7aaa7a] transition-colors hover:border-[#5a8a5a] hover:text-[#9aca9a]">confirm find - award {assignment.score} pts</button>
             </form>
             <form action="/api/admin/assignments" method="POST" class="flex min-w-[200px] flex-1 flex-col gap-2">
               <input type="hidden" name="action" value="reject_capture" />
@@ -105,7 +105,7 @@ const statusClass: Record<string, string> = {
               <img src={`/api/captures/${assignment.id}?cb=${cb}`} alt="submitted photo" class="block aspect-[4/3] w-full rounded border border-[#2a2a2a] bg-[#111] object-cover" />
             </div>
             <div>
-              <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.08em] text-[#888]">target — face</p>
+              <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.08em] text-[#888]">target - face</p>
               <img src={`/api/photos/${assignment.target_id}/face?cb=${cb}`} alt="target face" class="block aspect-[4/3] w-full rounded border border-[#2a2a2a] bg-[#111] object-cover" />
             </div>
           </div>

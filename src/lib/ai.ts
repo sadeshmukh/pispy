@@ -22,7 +22,7 @@ const SYSTEM_PROMPT = `You help run an in-person scavenger hunt where players tr
 
 Rules:
 - Each clue must be one short, factual statement (appearance, where they're from, habits, where they hang out, hobbies, distinctive items, vibe).
-- Treat the profile facts as true. Location is a strong clue — include it when present.
+- Treat the profile facts as true. Location is a strong clue - include it when present.
 - Prefer specific, observable things over vague personality traits.
 - Do not invent details that are not supported by the inputs. Ignore anything that wouldn't help recognize someone in person.
 - Rate each clue's difficulty for narrowing down who it is: "easy" = very identifying, "medium" = somewhat, "hard" = barely narrows it down.
@@ -31,14 +31,14 @@ Rules:
 
 // Turn a free-form self-description plus verified profile facts into structured
 // clues. Returns [] on any failure (network, bad key, malformed output) so
-// onboarding never blocks on the AI — an admin can regenerate later.
+// onboarding never blocks on the AI - an admin can regenerate later.
 export async function generateClues(
 	aboutText: string,
 	displayName: string,
 	profile: ProfileField[] = [],
 ): Promise<GeneratedClue[]> {
 	const text = aboutText.trim();
-	// Nothing to work with — no self-description and no usable profile facts.
+	// Nothing to work with - no self-description and no usable profile facts.
 	if (!text && profile.length === 0) return [];
 
 	const client = getClient();

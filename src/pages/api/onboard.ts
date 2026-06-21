@@ -98,7 +98,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 				choice === "no"
 					? "No"
 					: choice === "yes" && detail
-						? `Yes — ${detail}`
+						? `Yes - ${detail}`
 						: "";
 		}
 		if (answer) {
@@ -115,7 +115,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 		}
 	}
 
-	// Replace only the user's own clues — AI-generated ones (source = 'ai') are
+	// Replace only the user's own clues - AI-generated ones (source = 'ai') are
 	// managed separately below. Re-inserting makes removals and reordering explicit.
 	await db.execute({
 		sql: "DELETE FROM custom_clues WHERE slack_id = ? AND source = 'user'",

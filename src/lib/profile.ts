@@ -1,6 +1,6 @@
 // Curated Slack-profile fields pulled from the flaron admin API and folded into
 // AI clue generation. Only fields that help recognize or locate a real person at
-// an event are allowed through — deliberately no online handles/links (GitHub,
+// an event are allowed through - deliberately no online handles/links (GitHub,
 // Website, Social), no internal data (Manager), no PII (Birthday, Start Date),
 // and no jargon-prone fields (Title, Name Pronunciation, Favorite Channel(s)),
 // which in practice are abused for channel plugs.

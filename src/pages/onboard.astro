@@ -129,7 +129,7 @@ const { rows: customClues } = await db.execute({
                       <label class="choice-no relative z-[1] cursor-pointer select-none px-4 py-[0.45rem] text-center text-[0.82rem] uppercase tracking-[0.08em] text-[#777] transition-colors has-[input:checked]:text-white"><input type="radio" name={`clue_choice_${field.id}`} value="no" checked={existingClues[String(field.id)] === 'No'} class="absolute h-px w-px opacity-0" /><span>no</span></label>
                       <label class="choice-yes relative z-[1] cursor-pointer select-none px-4 py-[0.45rem] text-center text-[0.82rem] uppercase tracking-[0.08em] text-[#777] transition-colors has-[input:checked]:text-white"><input type="radio" name={`clue_choice_${field.id}`} value="yes" checked={(existingClues[String(field.id)] ?? '').startsWith('Yes')} class="absolute h-px w-px opacity-0" /><span>yes</span></label>
                     </div>
-                    <input type="text" name={`clue_elaboration_${field.id}`} value={(existingClues[String(field.id)] ?? '').replace(/^Yes\s*[—-]?\s*/, '')} placeholder={field.placeholder as string} data-elaboration class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]" />
+                    <input type="text" name={`clue_elaboration_${field.id}`} value={(existingClues[String(field.id)] ?? '').replace(/^Yes\s*[--]?\s*/, '')} placeholder={field.placeholder as string} data-elaboration class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]" />
                   </div>
                 ) : (
                   <input type="text" id={`field-${field.id}`} name={`clue_${field.id}`} value={existingClues[String(field.id)] ?? ''} placeholder={field.placeholder as string} autocomplete="off" class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]" />
@@ -141,7 +141,7 @@ const { rows: customClues } = await db.execute({
 
         <div class="mb-7 mt-10">
           <label for="about_text" class="mb-[0.4rem] block text-[0.7rem] uppercase tracking-[0.12em] text-[#666]">about you</label>
-          <p class="mb-3 text-[0.8rem] leading-[1.5] text-[#555]">Write anything that'd help a hunter spot and find you at the event — what you look like, where you hang out, your hobbies, quirks, vibe. We'll turn it into clues (an admin reviews them before they go live).</p>
+          <p class="mb-3 text-[0.8rem] leading-[1.5] text-[#555]">Write anything that'd help a hunter spot and find you at the event - what you look like, where you hang out, your hobbies, quirks, vibe. We'll turn it into clues (an admin reviews them before they go live).</p>
           <textarea id="about_text" name="about_text" rows="5" placeholder="e.g. I'm tall with curly hair and usually wear a green hoodie. You'll find me near the hardware tables or wherever there's coffee. I talk way too much about mechanical keyboards." class="w-full resize-y border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] leading-[1.5] text-[#ccc] outline-none transition-colors focus:border-[#555]">{aboutText}</textarea>
         </div>
 

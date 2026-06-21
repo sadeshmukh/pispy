@@ -34,7 +34,7 @@ const userClues = customClues.filter((c) => c.source !== "ai");
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>pispy — review {user.display_name as string}</title>
+    <title>pispy - review {user.display_name as string}</title>
   </head>
   <body class="bg-[#111] font-sans text-[#ccc]">
     <div class="mx-auto max-w-[700px] px-6 pt-10 pb-16">
@@ -88,7 +88,7 @@ const userClues = customClues.filter((c) => c.source !== "ai");
       {(aiClues.length > 0 || aboutText) && (
         <div class="mb-8">
           <div class="mb-3 flex items-center justify-between gap-4">
-            <p class="text-[0.65rem] uppercase tracking-[0.1em] text-[#6a7a8a]">AI-generated clues — sign off before approving</p>
+            <p class="text-[0.65rem] uppercase tracking-[0.1em] text-[#6a7a8a]">AI-generated clues - sign off before approving</p>
             <form action="/api/admin/review" method="POST">
               <input type="hidden" name="slack_id" value={slack_id} />
               <input type="hidden" name="action" value="regenerate_clues" />
@@ -96,7 +96,7 @@ const userClues = customClues.filter((c) => c.source !== "ai");
             </form>
           </div>
           {aiClues.length === 0 ? (
-            <p class="text-[0.82rem] text-[#666]">No AI clues yet — regenerate to create some from the description above.</p>
+            <p class="text-[0.82rem] text-[#666]">No AI clues yet - regenerate to create some from the description above.</p>
           ) : (
             <form action="/api/admin/review" method="POST" class="flex flex-col items-start gap-[0.65rem]">
               <input type="hidden" name="slack_id" value={slack_id} />
@@ -118,7 +118,7 @@ const userClues = customClues.filter((c) => c.source !== "ai");
 
       {userClues.length > 0 && (
         <div class="mb-8">
-          <p class="mb-3 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">their own clues — editable before approval</p>
+          <p class="mb-3 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">their own clues - editable before approval</p>
           <form action="/api/admin/review" method="POST" class="flex flex-col items-start gap-[0.65rem]">
             <input type="hidden" name="slack_id" value={slack_id} />
             <input type="hidden" name="action" value="save_custom_clues" />
