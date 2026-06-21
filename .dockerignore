@@ -1,0 +1,10 @@
+node_modules
+.git
+.astro
+dist
+.vscode
+.tool-versions
+.gitignore
+README.md
+Dockerfile
+.dockerignore
