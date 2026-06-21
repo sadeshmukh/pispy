@@ -23,6 +23,11 @@ export const messages = {
 			note || "Open the app for details pwease."
 		}`,
 
+	// A target has been assigned, but the timer has not started yet. Only the
+	// hunter receives this; the target is told once the hunt actually begins.
+	huntReadyHunter: () =>
+		":eyes: Your hunt is ready to start! Open pispy when you're ready to begin. The timer won't start until you press *Start hunt*.",
+
 	// A hunt just went live. The hunter learns who they're after and sees every
 	// clue in the app; the target only learns that *someone* is now hunting them.
 	huntStartedHunter: (targetName: string) =>

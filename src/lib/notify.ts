@@ -38,6 +38,10 @@ export async function notifyChangesRequested(
 	await dm(slackId, messages.changesRequested(note));
 }
 
+export async function notifyHuntReady(hunterId: string): Promise<void> {
+	await dm(hunterId, messages.huntReadyHunter());
+}
+
 export async function notifyHuntStarted(
 	hunterId: string,
 	targetId: string,

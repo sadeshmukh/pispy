@@ -4,6 +4,7 @@ import { getAssignment, startAssignment } from "../../../lib/hunt";
 import {
 	notifyCaptureApproved,
 	notifyCaptureRejected,
+	notifyHuntReady,
 } from "../../../lib/notify";
 
 export const POST: APIRoute = async ({ request, redirect }) => {
@@ -34,6 +35,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 				args: [hunter_id, target_id],
 			});
 		}
+		await notifyHuntReady(hunter_id);
 		return redirect("/admin/assignments");
 	}
 

@@ -2,11 +2,15 @@
 import "../styles/global.css";
 import { getSession, isAdmin } from "../lib/auth";
 import { db } from "../lib/db";
+import { getAssignmentForHunter } from "../lib/hunt";
 
 const session = getSession(Astro.cookies);
 
 let status: string | null = null;
 let showAdminLink = false;
+let huntNotice:
+	| { eyebrow: string; message: string; action: string; urgent: boolean }
+	| null = null;
 if (session) {
 	const { rows } = await db.execute({
 		sql: "SELECT onboarding_status FROM users WHERE slack_id = ?",
@@ -19,6 +23,39 @@ if (session) {
 	}
 
 	showAdminLink = isAdmin(session.slack_id);
+
+	if (status === "approved") {
+		const assignment = await getAssignmentForHunter(session.slack_id);
+		if (assignment?.status === "assigned") {
+			huntNotice = {
+				eyebrow: "target assigned",
+				message: "You have someone to hunt. Start when you're ready.",
+				action: "Go to your hunt",
+				urgent: true,
+			};
+		} else if (assignment?.status === "active" && assignment.review_note) {
+			huntNotice = {
+				eyebrow: "submission rejected",
+				message: assignment.review_note,
+				action: "Return to your hunt",
+				urgent: true,
+			};
+		} else if (assignment?.status === "active") {
+			huntNotice = {
+				eyebrow: "hunt in progress",
+				message: "Your target is still out there.",
+				action: "Open your hunt",
+				urgent: true,
+			};
+		} else if (assignment?.status === "submitted") {
+			huntNotice = {
+				eyebrow: "photo under review",
+				message: "Your capture is waiting for an admin to confirm it.",
+				action: "View submission",
+				urgent: false,
+			};
+		}
+	}
 }
 ---
 
@@ -43,9 +80,35 @@ if (session) {
           <a href="/api/auth/logout" class="hover:text-white">Log out</a>
         </div>
       ) : (
-        <div class="flex flex-col items-center gap-[1.2rem]">
+        <div class="flex w-full max-w-[420px] flex-col items-center gap-[1.2rem] px-6">
           <p class="font-bold text-lg">hi {session.display_name}!</p>
           <hr class="border-stone-300 w-full border-dotted" />
+          {huntNotice && (
+            <a
+              href="/hunt"
+              class:list={[
+                "group w-full rounded border px-5 py-4 no-underline transition-colors",
+                huntNotice.urgent
+                  ? "border-[#6b4444] bg-[#1a1414] hover:border-[#9a5a5a]"
+                  : "border-[#333] bg-[#161616] hover:border-[#555]",
+              ]}
+            >
+              <span
+                class:list={[
+                  "mb-2 block text-[0.65rem] uppercase tracking-[0.12em]",
+                  huntNotice.urgent ? "text-[#c27b7b]" : "text-[#888]",
+                ]}
+              >
+                {huntNotice.eyebrow}
+              </span>
+              <span class="block text-[0.92rem] leading-[1.45] text-[#ddd]">
+                {huntNotice.message}
+              </span>
+              <span class="mt-3 block text-[0.78rem] text-[#8eb4ce] group-hover:text-[#b9d7eb]">
+                {huntNotice.action} →
+              </span>
+            </a>
+          )}
           <a href="/hunt" class="hover:text-white">Hunt</a>
           <a href="/leaderboard" class="hover:text-white">Leaderboard</a>
           {showAdminLink && (
