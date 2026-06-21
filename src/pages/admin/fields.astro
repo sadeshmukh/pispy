@@ -29,44 +29,47 @@ const { rows: fields } = await db.execute(
       <p class="mb-7 text-[0.8rem] text-[#555]">questions users answer during onboarding. these become clues others use to find them.</p>
 
       {fields.length > 0 && (
-        <table class="mb-8 w-full border-collapse [&_td]:border-t [&_td]:border-[#1a1a1a] [&_td]:py-2 [&_td]:align-middle [&_th]:pb-2 [&_th]:text-left [&_th]:text-[0.65rem] [&_th]:font-normal [&_th]:uppercase [&_th]:tracking-[0.1em] [&_th]:text-[#444]">
-          <thead>
-            <tr><th>order</th><th>question</th><th></th></tr>
-          </thead>
-          <tbody>
-            {fields.map(f => (
-              <tr>
-                <td class="font-mono text-[0.8rem] text-[#555]">{f.field_order as number}</td>
-                <td>
-                  <form action="/api/admin/fields" method="POST" class="flex items-center gap-2">
-                    <input type="hidden" name="action" value="update" />
-                    <input type="hidden" name="id" value={f.id as number} />
-                    <div class="grid min-w-0 flex-1 gap-1.5">
-                      <input type="text" name="prompt" value={f.prompt as string} aria-label="question" class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
-                      <input type="text" name="placeholder" value={f.placeholder as string} placeholder="textbox placeholder (optional)" aria-label="textbox placeholder" class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+        <form action="/api/admin/fields" method="POST">
+          <input type="hidden" name="action" value="update_all" />
+          <table class="mb-4 w-full border-collapse [&_td]:border-t [&_td]:border-[#1a1a1a] [&_td]:py-2 [&_td]:align-middle [&_th]:pb-2 [&_th]:text-left [&_th]:text-[0.65rem] [&_th]:font-normal [&_th]:uppercase [&_th]:tracking-[0.1em] [&_th]:text-[#444]">
+            <thead>
+              <tr><th>order</th><th>question</th><th></th></tr>
+            </thead>
+            <tbody>
+              {fields.map(f => (
+                <tr>
+                  <td class="font-mono text-[0.8rem] text-[#555]">{f.field_order as number}</td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <input type="hidden" name="id" value={f.id as number} />
+                      <div class="grid min-w-0 flex-1 gap-1.5">
+                        <input type="text" name={`prompt_${f.id}`} value={f.prompt as string} aria-label="question" class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+                        <input type="text" name={`placeholder_${f.id}`} value={f.placeholder as string} placeholder="textbox placeholder (optional)" aria-label="textbox placeholder" class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+                      </div>
+                      <select name={`difficulty_${f.id}`} aria-label="difficulty" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none">
+                        {['hard', 'medium', 'easy'].map(level => <option value={level} selected={f.difficulty === level}>{level}</option>)}
+                      </select>
+                      <select name={`question_type_${f.id}`} aria-label="answer type" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none">
+                        <option value="text" selected={f.question_type === 'text'}>text</option>
+                        <option value="yes_no" selected={f.question_type === 'yes_no'}>yes / no</option>
+                      </select>
+                      <input type="number" name={`field_order_${f.id}`} value={f.field_order as number} class="w-[52px] flex-none border border-[#2a2a2a] bg-[#161616] px-[0.4rem] py-[0.35rem] font-mono text-[0.75rem] text-[#555] outline-none [-moz-appearance:textfield]" />
                     </div>
-                    <select name="difficulty" aria-label="difficulty" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none">
-                      {['hard', 'medium', 'easy'].map(level => <option value={level} selected={f.difficulty === level}>{level}</option>)}
-                    </select>
-                    <select name="question_type" aria-label="answer type" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none">
-                      <option value="text" selected={f.question_type === 'text'}>text</option>
-                      <option value="yes_no" selected={f.question_type === 'yes_no'}>yes / no</option>
-                    </select>
-                    <input type="number" name="field_order" value={f.field_order as number} class="w-[52px] flex-none border border-[#2a2a2a] bg-[#161616] px-[0.4rem] py-[0.35rem] font-mono text-[0.75rem] text-[#555] outline-none [-moz-appearance:textfield]" />
-                    <button type="submit" class="cursor-pointer whitespace-nowrap border-none bg-none py-[0.2rem] font-sans text-[0.8rem] text-[#555] hover:text-[#999]">save</button>
-                  </form>
-                </td>
-                <td>
-                  <form action="/api/admin/fields" method="POST">
-                    <input type="hidden" name="action" value="delete" />
-                    <input type="hidden" name="id" value={f.id as number} />
-                    <button type="submit" class="cursor-pointer border-none bg-none py-[0.2rem] font-sans text-[0.8rem] text-[#5a3a3a] hover:text-[#aa6a6a]">remove</button>
-                  </form>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td>
+                    <label class="ml-2 flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[0.8rem] text-[#5a3a3a] hover:text-[#aa6a6a]">
+                      <input type="checkbox" name="delete" value={f.id as number} class="accent-[#7a4545]" />
+                      delete
+                    </label>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div class="mb-8 flex justify-end">
+            <button type="submit" class="cursor-pointer whitespace-nowrap border border-[#333] bg-none px-4 py-[0.35rem] font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]">save fields</button>
+          </div>
+        </form>
       )}
 
       {fields.length === 0 && <p class="mb-8 text-[0.9rem] text-[#444]">no fields yet</p>}
