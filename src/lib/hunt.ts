@@ -61,7 +61,10 @@ export async function getAssignmentForHunter(
 	hunter_id: string,
 ): Promise<Assignment | null> {
 	const { rows } = await db.execute({
-		sql: `SELECT ${ASSIGNMENT_COLUMNS} FROM assignments WHERE hunter_id = ?`,
+		sql: `SELECT ${ASSIGNMENT_COLUMNS} FROM assignments
+          WHERE hunter_id = ?
+          ORDER BY CASE WHEN status = 'completed' THEN 1 ELSE 0 END, id DESC
+          LIMIT 1`,
 		args: [hunter_id],
 	});
 	return rowToAssignment(rows[0]);

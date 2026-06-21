@@ -17,10 +17,12 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 		if (!hunter_id || !target_id || hunter_id === target_id)
 			return redirect("/admin/assignments");
 
-		// (Re)assign this hunter a target. Reassigning resets the hunt back to the
-		// 'assigned' state.
+		// Reuse an unfinished hunt when one exists, but never overwrite a
+		// completed round: its score is permanent leaderboard history.
 		const existing = await db.execute({
-			sql: "SELECT id FROM assignments WHERE hunter_id = ?",
+			sql: `SELECT id FROM assignments
+            WHERE hunter_id = ? AND status != 'completed'
+            ORDER BY id DESC LIMIT 1`,
 			args: [hunter_id],
 		});
 		if (existing.rows[0]) {
@@ -30,7 +32,16 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 				args: [id],
 			});
 			await db.execute({
-				sql: `UPDATE assignments SET target_id = ?, status = 'assigned', started_at = NULL WHERE id = ?`,
+				sql: `UPDATE assignments SET
+                target_id = ?,
+                status = 'assigned',
+                started_at = NULL,
+                submitted_at = NULL,
+                score = NULL,
+                submission_photo = NULL,
+                submission_photo_mime = NULL,
+                review_note = NULL
+              WHERE id = ?`,
 				args: [target_id, id],
 			});
 		} else {

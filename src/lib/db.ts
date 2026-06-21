@@ -2,7 +2,7 @@ import { createClient } from "@libsql/client";
 
 // Bump this whenever initDb gains a migration. Middleware uses it to rerun
 // initialization after a hot reload instead of keeping a stale "ready" flag.
-export const DB_SCHEMA_VERSION = 5;
+export const DB_SCHEMA_VERSION = 6;
 
 export const db = createClient({
 	url: import.meta.env.TURSO_URL,
@@ -41,7 +41,7 @@ export async function initDb() {
     );
     CREATE TABLE IF NOT EXISTS assignments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      hunter_id TEXT NOT NULL UNIQUE,
+      hunter_id TEXT NOT NULL,
       target_id TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'assigned',
       started_at INTEGER,
@@ -103,4 +103,48 @@ export async function initDb() {
 			}
 		}
 	}
+
+	// Older schemas allowed only one assignment row per hunter. That caused a
+	// new round to overwrite the completed row (and its awarded score). Rebuild
+	// the table once without that constraint so completed rounds remain history.
+	const assignmentSchema = await db.execute(
+		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'assignments'",
+	);
+	const assignmentSql = (assignmentSchema.rows[0]?.sql as string | null) ?? "";
+	if (/hunter_id\s+TEXT\s+NOT\s+NULL\s+UNIQUE/i.test(assignmentSql)) {
+		await db.executeMultiple(`
+      BEGIN;
+      ALTER TABLE assignments RENAME TO assignments_legacy;
+      CREATE TABLE assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hunter_id TEXT NOT NULL,
+        target_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'assigned',
+        started_at INTEGER,
+        submitted_at INTEGER,
+        score INTEGER,
+        submission_photo BLOB,
+        submission_photo_mime TEXT,
+        review_note TEXT,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch())
+      );
+      INSERT INTO assignments
+        (id, hunter_id, target_id, status, started_at, submitted_at, score,
+         submission_photo, submission_photo_mime, review_note, created_at)
+      SELECT id, hunter_id, target_id, status, started_at, submitted_at, score,
+             submission_photo, submission_photo_mime, review_note, created_at
+      FROM assignments_legacy;
+      DROP TABLE assignments_legacy;
+      COMMIT;
+    `);
+	}
+
+	// A hunter may have any number of completed rounds, but only one current
+	// round. The partial index also protects this invariant under concurrent
+	// admin requests.
+	await db.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS assignments_one_current_hunt
+    ON assignments (hunter_id)
+    WHERE status != 'completed'
+  `);
 }
