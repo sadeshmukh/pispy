@@ -14,6 +14,7 @@ const user = userRows[0];
 const status = user?.onboarding_status as string;
 const reviewNote = user?.review_note as string | null;
 const aboutText = (user?.about_text as string | null) ?? "";
+const missingPhotos = Astro.url.searchParams.get("error") === "missing_photos";
 
 if (status === "approved" || status === "pending_review") {
 	return Astro.redirect("/");
@@ -31,7 +32,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
 	clueRows.map((r) => [String(r.field_id), r.answer as string]),
 );
 const { rows: customClues } = await db.execute({
-	sql: "SELECT id, clue, difficulty FROM custom_clues WHERE slack_id = ? AND source = 'user' ORDER BY id",
+	sql: "SELECT clue, difficulty FROM custom_clues WHERE slack_id = ? AND source = 'user' ORDER BY id",
 	args: [session.slack_id],
 });
 ---
@@ -57,7 +58,7 @@ const { rows: customClues } = await db.execute({
         {session.avatar_url && <img src={session.avatar_url} alt="" class="h-12 w-12 rounded-full object-cover grayscale-[30%]" />}
         <span class="text-[1.1rem] text-[#ddd]">hi {session.display_name}</span>
       </header>
-      <section id="consent-gate" class="border border-[#5a4a1a] bg-[#1a170f] p-5">
+      <section id="consent-gate" class="border border-[#5a4a1a] bg-[#1a170f] p-5" hidden={missingPhotos}>
         <p class="mb-2 text-[0.7rem] text-[#c8ad5a]">Disclaimer</p>
         <p class="mb-5 text-[0.9rem] leading-[1.6] text-[#d7c58a]">we thank you for trusting us with your data; we will not extort, sell, or use this maliciously. the data shall only be kept until the end of sunday/demos, and its usage is limited to this project.</p>
         <i class="mb-5 text-[0.9rem] leading-[1.6] text-[#d7c58a]">we may sell it to palantir tho</i>
@@ -68,7 +69,10 @@ const { rows: customClues } = await db.execute({
         <button id="consent-continue" type="button" disabled class="cursor-pointer border border-[#6a5a2a] bg-none px-6 py-[0.5rem] font-sans text-[0.85rem] text-[#e0cf97] transition-colors hover:border-[#b89c4a] hover:text-[#fff2c4] disabled:cursor-not-allowed disabled:border-[#3a3218] disabled:text-[#5d532f]">continue</button>
       </section>
 
-      <form id="onboard-form" action="/api/onboard" method="POST" enctype="multipart/form-data" hidden>
+      <form id="onboard-form" action="/api/onboard" method="POST" enctype="multipart/form-data" hidden={!missingPhotos}>
+        <div id="photo-error" role="alert" aria-live="polite" class="mb-7 border-l-2 border-[#9a4545] bg-[#211616] px-4 py-3 text-[0.9rem] text-[#d99]" hidden={!missingPhotos}>
+          please add both a badge photo and a face photo before submitting.
+        </div>
         <div class="mb-7">
           <label class="mb-[0.4rem] block text-[0.7rem] tracking-[0.12em] uppercase text-[#666]">badge photo</label>
           <p class="mb-3 text-[0.8rem] text-[#555]">a photo of your badge</p>
@@ -145,39 +149,12 @@ const { rows: customClues } = await db.execute({
           <textarea id="about_text" name="about_text" rows="5" placeholder="" class="w-full resize-y border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] leading-[1.5] text-[#ccc] outline-none transition-colors focus:border-[#555]">{aboutText}</textarea>
         </div>
 
-        <div class="mb-7 border border-[#262626] bg-[#141414] p-5 max-[420px]:p-4">
-          <p class="mb-2 text-[0.7rem] uppercase tracking-[0.12em] text-[#888]">your own clues <span class="float-right normal-case tracking-normal text-[#555]">optional</span></p>
-          <p class="mb-[1.1rem] text-[0.8rem] leading-[1.5] text-[#555]">Write your own clue!! Easy means that easy to link to you(generic/common attribute), hard means uniqueness</p>
-          <div id="custom-clues" class="[counter-reset:custom-clue]">
-            {customClues.map((clue, index) => (
-              <div class="custom-clue-row mb-[0.65rem] grid grid-cols-[28px_1fr_28px] items-center gap-[0.65rem] border border-[#292929] bg-[#181818] p-3 transition-colors [counter-increment:custom-clue] focus-within:border-[#444] focus-within:bg-[#1a1a1a] max-[420px]:grid-cols-[1fr_28px]">
-                <span class="grid h-7 w-7 place-items-center rounded-full border border-[#303030] font-mono text-[0.68rem] text-[#666] before:[content:counter(custom-clue,decimal-leading-zero)] max-[420px]:hidden" aria-hidden="true"></span>
-                <div class="grid grid-cols-[minmax(0,1fr)_90px] gap-2 max-[420px]:grid-cols-[1fr]">
-                  <input type="text" name={`custom_clue_${index}`} value={clue.clue as string} placeholder="e.g. I always carry a red water bottle" aria-label="custom clue" class="w-full border border-[#2a2a2a] bg-[#121212] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]" />
-                  <select name={`custom_difficulty_${index}`} aria-label="clue difficulty" class="w-full cursor-pointer border border-[#2a2a2a] bg-[#121212] p-2 capitalize text-[#aaa]">
-                    {['hard', 'medium', 'easy'].map(level => <option value={level} selected={clue.difficulty === level}>{level}</option>)}
-                  </select>
-                </div>
-                <button type="button" class="remove-clue h-7 w-7 cursor-pointer border-0 bg-transparent text-[1.2rem] leading-none text-[#633] transition-colors hover:bg-[#241818] hover:text-[#c77]" aria-label="remove clue">×</button>
-              </div>
-            ))}
-          </div>
-          <template id="custom-clue-template">
-            <div class="custom-clue-row mb-[0.65rem] grid grid-cols-[28px_1fr_28px] items-center gap-[0.65rem] border border-[#292929] bg-[#181818] p-3 transition-colors [counter-increment:custom-clue] focus-within:border-[#444] focus-within:bg-[#1a1a1a] max-[420px]:grid-cols-[1fr_28px]">
-              <span class="grid h-7 w-7 place-items-center rounded-full border border-[#303030] font-mono text-[0.68rem] text-[#666] before:[content:counter(custom-clue,decimal-leading-zero)] max-[420px]:hidden" aria-hidden="true"></span>
-              <div class="grid grid-cols-[minmax(0,1fr)_90px] gap-2 max-[420px]:grid-cols-[1fr]">
-                <input type="text" placeholder="e.g. I always carry a red water bottle" aria-label="custom clue" class="w-full border border-[#2a2a2a] bg-[#121212] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]" />
-                <select aria-label="clue difficulty" class="w-full cursor-pointer border border-[#2a2a2a] bg-[#121212] p-2 capitalize text-[#aaa]">
-                  <option value="hard">hard</option>
-                  <option value="medium" selected>medium</option>
-                  <option value="easy">easy</option>
-                </select>
-              </div>
-              <button type="button" class="h-7 w-7 cursor-pointer border-0 bg-transparent text-[1.2rem] leading-none text-[#633] transition-colors hover:bg-[#241818] hover:text-[#c77]" aria-label="remove clue">×</button>
-            </div>
-          </template>
-          <button type="button" id="add-custom-clue" class="w-full cursor-pointer border border-dashed border-[#353535] bg-[#171717] px-4 py-[0.7rem] font-sans text-[0.82rem] text-[#777] transition-colors hover:border-[#555] hover:bg-[#1b1b1b] hover:text-[#bbb]"><span class="mr-[0.35rem] text-base text-[#999]">+</span> add another clue</button>
-        </div>
+        {customClues.map((clue, index) => (
+          <>
+            <input type="hidden" name={`custom_clue_${index}`} value={clue.clue as string} />
+            <input type="hidden" name={`custom_difficulty_${index}`} value={clue.difficulty as string} />
+          </>
+        ))}
 
         <div class="mt-10">
           <button type="submit" class="cursor-pointer border border-[#444] bg-none px-8 py-[0.6rem] font-sans text-[0.9rem] text-[#ccc] transition-colors hover:border-[#888] hover:text-white">submit for review</button>
@@ -190,6 +167,7 @@ const { rows: customClues } = await db.execute({
       const consentCheckbox = document.getElementById('consent-checkbox') as HTMLInputElement;
       const consentContinue = document.getElementById('consent-continue') as HTMLButtonElement;
       const onboardForm = document.getElementById('onboard-form') as HTMLFormElement;
+      const photoError = document.getElementById('photo-error')!;
 
       consentCheckbox.addEventListener('change', () => {
         consentContinue.disabled = !consentCheckbox.checked;
@@ -282,6 +260,19 @@ const { rows: customClues } = await db.execute({
       setupPhotoField('badge');
       setupPhotoField('face');
 
+      onboardForm.addEventListener('submit', event => {
+        const missingPhoto = ['badge', 'face'].some(id => {
+          const data = document.getElementById(`${id}-data`) as HTMLInputElement;
+          const file = document.getElementById(`${id}-file-fallback`) as HTMLInputElement;
+          return !data.value && !file.files?.length;
+        });
+        if (!missingPhoto) return;
+
+        event.preventDefault();
+        photoError.hidden = false;
+        photoError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+
       function syncYesNo() {
         document.querySelectorAll<HTMLElement>('[data-yes-no]').forEach(group => {
           const yes = group.querySelector<HTMLInputElement>('input[value="yes"]');
@@ -293,26 +284,6 @@ const { rows: customClues } = await db.execute({
       }
       document.querySelectorAll('[data-yes-no] input[type="radio"]').forEach(input => input.addEventListener('change', syncYesNo));
       syncYesNo();
-
-      const customContainer = document.getElementById('custom-clues')!;
-      const addCustom = document.getElementById('add-custom-clue')!;
-      const customTemplate = document.getElementById('custom-clue-template') as HTMLTemplateElement;
-      let customIndex = customContainer.children.length;
-      function wireRemove(button: Element) {
-        button.addEventListener('click', () => button.closest('.custom-clue-row')?.remove());
-      }
-      document.querySelectorAll('.remove-clue').forEach(wireRemove);
-      addCustom.addEventListener('click', () => {
-        const row = customTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
-        const clueInput = row.querySelector<HTMLInputElement>('input[type="text"]')!;
-        const difficultySelect = row.querySelector<HTMLSelectElement>('select')!;
-        clueInput.name = `custom_clue_${customIndex}`;
-        difficultySelect.name = `custom_difficulty_${customIndex}`;
-        customIndex += 1;
-        customContainer.appendChild(row);
-        wireRemove(row.querySelector('.remove-clue')!);
-        clueInput.focus();
-      });
 
       // hide fallback file inputs (they're JS-only fallback for no-JS)
       document.querySelectorAll('.fallback-file').forEach(el => {
