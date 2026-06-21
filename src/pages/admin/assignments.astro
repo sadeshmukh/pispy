@@ -1,4 +1,5 @@
 ---
+import '../../styles/global.css';
 import { db } from '../../lib/db';
 
 const { rows: approved } = await db.execute(
@@ -26,6 +27,13 @@ const statusLabel: Record<string, string> = {
   submitted: 'needs review',
   completed: 'found',
 };
+
+const statusClass: Record<string, string> = {
+  assigned: 'text-[#b3b35a]',
+  active: 'text-[#6a9aba]',
+  submitted: 'text-[#c08a4a]',
+  completed: 'text-[#6a9a6a]',
+};
 ---
 
 <!doctype html>
@@ -35,24 +43,24 @@ const statusLabel: Record<string, string> = {
     <meta name="viewport" content="width=device-width" />
     <title>pispy — assignments</title>
   </head>
-  <body>
-    <div class="page">
-      <nav>
-        <a href="/admin">review</a>
-        <a href="/admin/users">users</a>
-        <a href="/admin/fields">fields</a>
-        <a href="/admin/assignments">assignments</a>
-        <a href="/leaderboard">leaderboard</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+  <body class="bg-[#111] font-sans text-[#ccc]">
+    <div class="mx-auto max-w-[760px] px-6 pt-10 pb-16">
+      <nav class="mb-10 flex gap-6 border-b border-[#1e1e1e] pb-4 text-[0.85rem]">
+        <a href="/admin" class="text-[#888] no-underline hover:text-[#ccc]">review</a>
+        <a href="/admin/users" class="text-[#888] no-underline hover:text-[#ccc]">users</a>
+        <a href="/admin/fields" class="text-[#888] no-underline hover:text-[#ccc]">fields</a>
+        <a href="/admin/assignments" class="text-[#888] no-underline hover:text-[#ccc]">assignments</a>
+        <a href="/leaderboard" class="text-[#888] no-underline hover:text-[#ccc]">leaderboard</a>
+        <a href="/api/auth/logout" class="ml-auto text-[#888] no-underline hover:text-[#ccc]">leave</a>
       </nav>
 
-      <h1>assignments</h1>
-      <p class="sub">Assign each hunter a target. Hunters reveal clues and submit a photo when they find them.</p>
+      <h1 class="mb-[0.4rem] text-[1.05rem] font-semibold text-[#ddd]">assignments</h1>
+      <p class="mb-7 text-[0.82rem] text-[#888]">Assign each hunter a target. Hunters reveal clues and submit a photo when they find them.</p>
 
       {assignments.length === 0 ? (
-        <p class="empty">no assignments yet</p>
+        <p class="text-[0.9rem] text-[#666]">no assignments yet</p>
       ) : (
-        <table>
+        <table class="mb-8 w-full border-collapse [&_td]:border-t [&_td]:border-[#1a1a1a] [&_td]:py-[0.65rem] [&_td]:align-middle [&_td]:text-[0.875rem] [&_th]:pb-2 [&_th]:text-left [&_th]:text-[0.65rem] [&_th]:font-normal [&_th]:uppercase [&_th]:tracking-[0.1em] [&_th]:text-[#444]">
           <thead>
             <tr><th>hunter</th><th>target</th><th>status</th><th>clues</th><th></th></tr>
           </thead>
@@ -61,14 +69,14 @@ const statusLabel: Record<string, string> = {
               <tr>
                 <td>{a.hunter_name as string}</td>
                 <td>{a.target_name as string}</td>
-                <td class={`status-${a.status as string}`}>{statusLabel[a.status as string] ?? a.status as string}</td>
-                <td class="muted mono">{a.released as number}/{a.total as number}</td>
-                <td class="row-actions">
-                  <a href={`/admin/assignment/${a.id}`}>manage →</a>
+                <td class={statusClass[a.status as string] ?? ''}>{statusLabel[a.status as string] ?? a.status as string}</td>
+                <td class="font-mono !text-[0.75rem] text-[#777]">{a.released as number}/{a.total as number}</td>
+                <td class="flex items-center gap-5">
+                  <a href={`/admin/assignment/${a.id}`} class="text-[#999] no-underline hover:text-[#ccc]">manage →</a>
                   <form action="/api/admin/assignments" method="POST">
                     <input type="hidden" name="action" value="unassign" />
                     <input type="hidden" name="id" value={a.id as number} />
-                    <button type="submit" class="btn-delete">unassign</button>
+                    <button type="submit" class="cursor-pointer border-none bg-none p-0 font-sans text-[0.8rem] text-[#aa6a6a] hover:text-[#ca8a8a]">unassign</button>
                   </form>
                 </td>
               </tr>
@@ -77,90 +85,35 @@ const statusLabel: Record<string, string> = {
         </table>
       )}
 
-      <div class="add-section">
-        <p class="add-label">new assignment</p>
+      <div class="mt-6 border-t border-[#1e1e1e] pt-6">
+        <p class="mb-3 text-[0.65rem] uppercase tracking-[0.1em] text-[#777]">new assignment</p>
         {approved.length < 2 ? (
-          <p class="empty">need at least two approved users to make an assignment.</p>
+          <p class="text-[0.9rem] text-[#666]">need at least two approved users to make an assignment.</p>
         ) : (
-          <form action="/api/admin/assignments" method="POST" class="add-form">
+          <form action="/api/admin/assignments" method="POST" class="flex flex-wrap items-end gap-4">
             <input type="hidden" name="action" value="assign" />
-            <label>
-              <span>hunter</span>
-              <select name="hunter_id" required>
+            <label class="flex flex-col gap-[0.35rem]">
+              <span class="text-[0.72rem] text-[#999]">hunter</span>
+              <select name="hunter_id" required class="min-w-[180px] rounded border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.4rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#555]">
                 <option value="" disabled selected>choose…</option>
                 {approved.map(u => (
                   <option value={u.slack_id as string}>{u.display_name as string}</option>
                 ))}
               </select>
             </label>
-            <label>
-              <span>target</span>
-              <select name="target_id" required>
+            <label class="flex flex-col gap-[0.35rem]">
+              <span class="text-[0.72rem] text-[#999]">target</span>
+              <select name="target_id" required class="min-w-[180px] rounded border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.4rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#555]">
                 <option value="" disabled selected>choose…</option>
                 {approved.map(u => (
                   <option value={u.slack_id as string}>{u.display_name as string}</option>
                 ))}
               </select>
             </label>
-            <button type="submit" class="btn-add">assign</button>
+            <button type="submit" class="cursor-pointer whitespace-nowrap rounded border border-[#444] bg-none px-5 py-[0.4rem] font-sans text-[0.85rem] text-[#ccc] transition-colors hover:border-[#888] hover:text-white">assign</button>
           </form>
         )}
       </div>
     </div>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
-  .page { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
-  nav {
-    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.85rem;
-  }
-  nav a { color: #888; text-decoration: none; }
-  nav a:hover { color: #ccc; }
-  nav .logout { margin-left: auto; }
-  h1 { font-size: 1.05rem; font-weight: 600; color: #ddd; margin-bottom: 0.4rem; }
-  .sub { font-size: 0.82rem; color: #888; margin-bottom: 1.75rem; }
-  .empty { font-size: 0.9rem; color: #666; }
-
-  table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
-  th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; font-weight: normal; padding: 0 0 0.5rem; text-align: left; }
-  td { padding: 0.65rem 0; border-top: 1px solid #1a1a1a; font-size: 0.875rem; vertical-align: middle; }
-  .muted { color: #777; font-size: 0.8rem; }
-  .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
-  .status-assigned { color: #b3b35a; }
-  .status-active { color: #6a9aba; }
-  .status-submitted { color: #c08a4a; }
-  .status-completed { color: #6a9a6a; }
-
-  .row-actions { display: flex; gap: 1.25rem; align-items: center; }
-  .row-actions a { color: #999; text-decoration: none; }
-  .row-actions a:hover { color: #ccc; }
-  .btn-delete {
-    background: none; border: none; color: #aa6a6a; font-family: inherit;
-    font-size: 0.8rem; cursor: pointer; padding: 0;
-  }
-  .btn-delete:hover { color: #ca8a8a; }
-
-  .add-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #1e1e1e; }
-  .add-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #777; margin-bottom: 0.75rem; }
-  .add-form { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; }
-  .add-form label { display: flex; flex-direction: column; gap: 0.35rem; }
-  .add-form label span { font-size: 0.72rem; color: #999; }
-  select {
-    background: #161616; border: 1px solid #2a2a2a; color: #ccc;
-    font-family: inherit; font-size: 0.85rem;
-    padding: 0.4rem 0.6rem; outline: none; min-width: 180px; border-radius: 4px;
-  }
-  select:focus { border-color: #555; }
-  .btn-add {
-    background: none; border: 1px solid #444; color: #ccc;
-    font-family: inherit; font-size: 0.85rem;
-    padding: 0.4rem 1.25rem; cursor: pointer; white-space: nowrap; border-radius: 4px;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .btn-add:hover { border-color: #888; color: #fff; }
-</style>

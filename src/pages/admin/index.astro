@@ -1,4 +1,5 @@
 ---
+import '../../styles/global.css';
 import { db } from '../../lib/db';
 
 const { rows: pending } = await db.execute(
@@ -29,28 +30,28 @@ const { rows: captures } = await db.execute(`
     <meta name="viewport" content="width=device-width" />
     <title>pispy — admin</title>
   </head>
-  <body>
-    <div class="page">
-      <nav>
-        <a href="/admin">review</a>
-        <a href="/admin/users">users</a>
-        <a href="/admin/fields">fields</a>
-        <a href="/admin/assignments">assignments</a>
-        <a href="/leaderboard">leaderboard</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+  <body class="bg-[#111] font-sans text-[#ccc]">
+    <div class="mx-auto max-w-[700px] px-6 py-10">
+      <nav class="mb-10 flex gap-6 border-b border-[#1e1e1e] pb-4 text-[0.85rem]">
+        <a href="/admin" class="text-[#888] no-underline hover:text-[#ccc]">review</a>
+        <a href="/admin/users" class="text-[#888] no-underline hover:text-[#ccc]">users</a>
+        <a href="/admin/fields" class="text-[#888] no-underline hover:text-[#ccc]">fields</a>
+        <a href="/admin/assignments" class="text-[#888] no-underline hover:text-[#ccc]">assignments</a>
+        <a href="/leaderboard" class="text-[#888] no-underline hover:text-[#ccc]">leaderboard</a>
+        <a href="/api/auth/logout" class="ml-auto text-[#888] no-underline hover:text-[#ccc]">leave</a>
       </nav>
 
-      <div class="stats">
+      <div class="mb-8 flex flex-wrap gap-6">
         {Object.entries(counts).map(([status, count]) => (
-          <span class="stat">{count} {status.replace('_', ' ')}</span>
+          <span class="text-[0.78rem] text-[#888]">{count} {status.replace('_', ' ')}</span>
         ))}
       </div>
 
-      <h1>captures to confirm</h1>
+      <h1 class="mb-4 text-[1.05rem] font-semibold text-[#ddd]">captures to confirm</h1>
       {captures.length === 0 ? (
-        <p class="empty">no submissions waiting</p>
+        <p class="text-[0.9rem] text-[#666]">no submissions waiting</p>
       ) : (
-        <table>
+        <table class="w-full border-collapse [&_td]:border-t [&_td]:border-[#1a1a1a] [&_td]:py-[0.65rem] [&_td]:text-[0.875rem] [&_td_a]:text-[#999] [&_td_a]:no-underline [&_td_a:hover]:text-[#ccc] [&_th]:pb-2 [&_th]:text-left [&_th]:text-[0.65rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.1em] [&_th]:text-[#777]">
           <thead>
             <tr><th>hunter</th><th>target</th><th>submitted</th><th>worth</th><th></th></tr>
           </thead>
@@ -59,8 +60,8 @@ const { rows: captures } = await db.execute(`
               <tr>
                 <td>{c.hunter_name as string}</td>
                 <td>{c.target_name as string}</td>
-                <td class="muted">{new Date((c.submitted_at as number) * 1000).toLocaleString()}</td>
-                <td class="muted mono">{c.score as number} pts</td>
+                <td class="!text-[0.8rem] text-[#777]">{new Date((c.submitted_at as number) * 1000).toLocaleString()}</td>
+                <td class="font-mono !text-[0.75rem] text-[#777]">{c.score as number} pts</td>
                 <td><a href={`/admin/assignment/${c.id}`}>review →</a></td>
               </tr>
             ))}
@@ -68,11 +69,11 @@ const { rows: captures } = await db.execute(`
         </table>
       )}
 
-      <h1 class="spaced">onboarding to review</h1>
+      <h1 class="mt-10 mb-4 text-[1.05rem] font-semibold text-[#ddd]">onboarding to review</h1>
       {pending.length === 0 ? (
-        <p class="empty">nothing to review</p>
+        <p class="text-[0.9rem] text-[#666]">nothing to review</p>
       ) : (
-        <table>
+        <table class="w-full border-collapse [&_td]:border-t [&_td]:border-[#1a1a1a] [&_td]:py-[0.65rem] [&_td]:text-[0.875rem] [&_td_a]:text-[#999] [&_td_a]:no-underline [&_td_a:hover]:text-[#ccc] [&_th]:pb-2 [&_th]:text-left [&_th]:text-[0.65rem] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.1em] [&_th]:text-[#777]">
           <thead>
             <tr><th>name</th><th>submitted</th><th></th></tr>
           </thead>
@@ -80,7 +81,7 @@ const { rows: captures } = await db.execute(`
             {pending.map(u => (
               <tr>
                 <td>{u.display_name as string}</td>
-                <td class="muted">{new Date((u.created_at as number) * 1000).toLocaleDateString()}</td>
+                <td class="!text-[0.8rem] text-[#777]">{new Date((u.created_at as number) * 1000).toLocaleDateString()}</td>
                 <td><a href={`/admin/review/${u.slack_id}`}>review →</a></td>
               </tr>
             ))}
@@ -90,29 +91,3 @@ const { rows: captures } = await db.execute(`
     </div>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
-  .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem; }
-  nav {
-    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.85rem;
-  }
-  nav a { color: #888; text-decoration: none; }
-  nav a:hover { color: #ccc; }
-  nav .logout { margin-left: auto; }
-  h1 { font-size: 1.05rem; font-weight: 600; color: #ddd; margin-bottom: 1rem; }
-  h1.spaced { margin-top: 2.5rem; }
-  .stats { display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
-  .stat { font-size: 0.78rem; color: #888; }
-  .empty { font-size: 0.9rem; color: #666; }
-  table { width: 100%; border-collapse: collapse; }
-  th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #777; font-weight: 600; padding: 0 0 0.5rem; text-align: left; }
-  td { padding: 0.65rem 0; border-top: 1px solid #1a1a1a; font-size: 0.875rem; }
-  td a { color: #999; text-decoration: none; }
-  td a:hover { color: #ccc; }
-  .muted { color: #777; font-size: 0.8rem; }
-  .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
-</style>

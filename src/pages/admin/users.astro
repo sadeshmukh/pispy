@@ -1,4 +1,5 @@
 ---
+import '../../styles/global.css';
 import { db } from '../../lib/db';
 
 const { rows: users } = await db.execute(
@@ -11,6 +12,13 @@ const statusLabel: Record<string, string> = {
   approved: 'approved',
   changes_requested: 'changes requested',
 };
+
+const statusClass: Record<string, string> = {
+  approved: 'text-[#5a7a5a]',
+  pending_review: 'text-[#7a7a4a]',
+  changes_requested: 'text-[#7a4a4a]',
+  pending_submission: 'text-[#555]',
+};
 ---
 
 <!doctype html>
@@ -20,23 +28,23 @@ const statusLabel: Record<string, string> = {
     <meta name="viewport" content="width=device-width" />
     <title>pispy — users</title>
   </head>
-  <body>
-    <div class="page">
-      <nav>
-        <a href="/admin">review</a>
-        <a href="/admin/users">users</a>
-        <a href="/admin/fields">fields</a>
-        <a href="/admin/assignments">assignments</a>
-        <a href="/leaderboard">leaderboard</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+  <body class="bg-[#111] font-sans text-[#ccc]">
+    <div class="mx-auto max-w-[800px] px-6 py-10">
+      <nav class="mb-10 flex gap-6 border-b border-[#1e1e1e] pb-4 text-[0.8rem]">
+        <a href="/admin" class="text-[#666] no-underline hover:text-[#ccc]">review</a>
+        <a href="/admin/users" class="text-[#666] no-underline hover:text-[#ccc]">users</a>
+        <a href="/admin/fields" class="text-[#666] no-underline hover:text-[#ccc]">fields</a>
+        <a href="/admin/assignments" class="text-[#666] no-underline hover:text-[#ccc]">assignments</a>
+        <a href="/leaderboard" class="text-[#666] no-underline hover:text-[#ccc]">leaderboard</a>
+        <a href="/api/auth/logout" class="ml-auto text-[#666] no-underline hover:text-[#ccc]">leave</a>
       </nav>
 
-      <h1>all users ({users.length})</h1>
+      <h1 class="mb-5 text-base font-normal text-[#888]">all users ({users.length})</h1>
 
       {users.length === 0 ? (
-        <p class="empty">no users yet</p>
+        <p class="text-[0.9rem] text-[#444]">no users yet</p>
       ) : (
-        <table>
+        <table class="w-full border-collapse [&_td]:border-t [&_td]:border-[#1a1a1a] [&_td]:py-[0.65rem] [&_td]:text-[0.875rem] [&_td_a]:text-[#888] [&_td_a]:no-underline [&_td_a:hover]:text-[#ccc] [&_th]:pb-2 [&_th]:text-left [&_th]:text-[0.65rem] [&_th]:font-normal [&_th]:uppercase [&_th]:tracking-[0.1em] [&_th]:text-[#444]">
           <thead>
             <tr><th>name</th><th>slack id</th><th>status</th><th>joined</th><th></th></tr>
           </thead>
@@ -44,12 +52,12 @@ const statusLabel: Record<string, string> = {
             {users.map(u => (
               <tr>
                 <td>{u.display_name as string}</td>
-                <td class="muted mono">{u.slack_id as string}</td>
-                <td class={`status-${u.onboarding_status as string}`}>
+                <td class="font-mono !text-[0.75rem] text-[#555]">{u.slack_id as string}</td>
+                <td class={statusClass[u.onboarding_status as string] ?? ''}>
                   {statusLabel[u.onboarding_status as string] ?? u.onboarding_status as string}
                 </td>
-                <td class="muted">{new Date((u.created_at as number) * 1000).toLocaleDateString()}</td>
-                <td class="row-links">
+                <td class="!text-[0.8rem] text-[#555]">{new Date((u.created_at as number) * 1000).toLocaleDateString()}</td>
+                <td class="flex justify-end gap-4">
                   {u.onboarding_status === 'pending_review' && (
                     <a href={`/admin/review/${u.slack_id}`}>review</a>
                   )}
@@ -63,31 +71,3 @@ const statusLabel: Record<string, string> = {
     </div>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
-  .page { max-width: 800px; margin: 0 auto; padding: 2.5rem 1.5rem; }
-  nav {
-    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem;
-  }
-  nav a { color: #666; text-decoration: none; }
-  nav a:hover { color: #ccc; }
-  nav .logout { margin-left: auto; }
-  h1 { font-size: 1rem; font-weight: normal; color: #888; margin-bottom: 1.25rem; }
-  .empty { font-size: 0.9rem; color: #444; }
-  table { width: 100%; border-collapse: collapse; }
-  th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; font-weight: normal; padding: 0 0 0.5rem; text-align: left; }
-  td { padding: 0.65rem 0; border-top: 1px solid #1a1a1a; font-size: 0.875rem; }
-  td a { color: #888; text-decoration: none; }
-  td a:hover { color: #ccc; }
-  .muted { color: #555; font-size: 0.8rem; }
-  .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
-  .status-approved { color: #5a7a5a; }
-  .status-pending_review { color: #7a7a4a; }
-  .status-changes_requested { color: #7a4a4a; }
-  .status-pending_submission { color: #555; }
-  .row-links { display: flex; gap: 1rem; justify-content: flex-end; }
-</style>

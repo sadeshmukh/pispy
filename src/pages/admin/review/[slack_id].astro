@@ -1,4 +1,5 @@
 ---
+import '../../../styles/global.css';
 import { db } from '../../../lib/db';
 
 const { slack_id } = Astro.params;
@@ -32,145 +33,82 @@ const { rows: customClues } = await db.execute({
     <meta name="viewport" content="width=device-width" />
     <title>pispy — review {user.display_name as string}</title>
   </head>
-  <body>
-    <div class="page">
-      <nav>
-        <a href="/admin">← back</a>
-        <a href="/admin/users">users</a>
-        <a href="/admin/fields">fields</a>
-        <a href="/admin/assignments">assignments</a>
-        <a href={`/admin/inspect/${slack_id}`}>inspect</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+  <body class="bg-[#111] font-sans text-[#ccc]">
+    <div class="mx-auto max-w-[700px] px-6 pt-10 pb-16">
+      <nav class="mb-10 flex gap-6 border-b border-[#1e1e1e] pb-4 text-[0.8rem]">
+        <a href="/admin" class="text-[#666] no-underline hover:text-[#ccc]">← back</a>
+        <a href="/admin/users" class="text-[#666] no-underline hover:text-[#ccc]">users</a>
+        <a href="/admin/fields" class="text-[#666] no-underline hover:text-[#ccc]">fields</a>
+        <a href="/admin/assignments" class="text-[#666] no-underline hover:text-[#ccc]">assignments</a>
+        <a href={`/admin/inspect/${slack_id}`} class="text-[#666] no-underline hover:text-[#ccc]">inspect</a>
+        <a href="/api/auth/logout" class="ml-auto text-[#666] no-underline hover:text-[#ccc]">leave</a>
       </nav>
 
-      <header>
-        {user.avatar_url && <img src={user.avatar_url as string} alt="" class="avatar" />}
+      <header class="mb-8 flex items-center gap-4">
+        {user.avatar_url && <img src={user.avatar_url as string} alt="" class="h-12 w-12 rounded-full object-cover grayscale-[20%]" />}
         <div>
-          <h1>{user.display_name as string}</h1>
-          <p class="slack-id">{slack_id}</p>
+          <h1 class="mb-[0.15rem] text-[1.1rem] font-normal text-[#ddd]">{user.display_name as string}</h1>
+          <p class="font-mono text-[0.75rem] text-[#555]">{slack_id}</p>
         </div>
       </header>
 
-      <div class="photos">
-        <div class="photo-wrap">
-          <p class="photo-label">badge</p>
-          <img src={`/api/photos/${slack_id}/badge`} alt="badge photo" class="photo" />
+      <div class="mb-8 grid grid-cols-2 gap-4">
+        <div>
+          <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.1em] text-[#555]">badge</p>
+          <img src={`/api/photos/${slack_id}/badge`} alt="badge photo" class="block aspect-[4/3] w-full border border-[#222] bg-[#161616] object-cover" />
         </div>
-        <div class="photo-wrap">
-          <p class="photo-label">face</p>
-          <img src={`/api/photos/${slack_id}/face`} alt="face photo" class="photo" />
+        <div>
+          <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.1em] text-[#555]">face</p>
+          <img src={`/api/photos/${slack_id}/face`} alt="face photo" class="block aspect-[4/3] w-full border border-[#222] bg-[#161616] object-cover" />
         </div>
       </div>
 
       {clues.length > 0 && (
-        <div class="clues">
-          <p class="section-label">clues</p>
+        <div class="mb-8">
+          <p class="mb-3 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">clues</p>
           {clues.map(c => (
-            <div class="clue">
-              <span class="clue-prompt">{c.prompt as string}</span>
-              <span class="clue-answer">{c.answer as string} <span class="level">{c.difficulty as string}</span></span>
+            <div class="flex items-baseline gap-4 border-t border-[#1a1a1a] py-2">
+              <span class="min-w-[140px] text-[0.75rem] text-[#555]">{c.prompt as string}</span>
+              <span class="text-[0.875rem] text-[#ccc]">{c.answer as string} <span class="ml-[0.4rem] text-[0.62rem] uppercase text-[#555]">{c.difficulty as string}</span></span>
             </div>
           ))}
         </div>
       )}
 
       {customClues.length > 0 && (
-        <div class="clues">
-          <p class="section-label">custom clues — editable before approval</p>
-          <form action="/api/admin/review" method="POST" class="custom-form">
+        <div class="mb-8">
+          <p class="mb-3 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">custom clues — editable before approval</p>
+          <form action="/api/admin/review" method="POST" class="flex flex-col items-start gap-[0.65rem]">
             <input type="hidden" name="slack_id" value={slack_id} />
             <input type="hidden" name="action" value="save_custom_clues" />
             {customClues.map(c => (
-              <div class="custom-row">
-                <input type="text" name={`custom_clue_${c.id}`} value={c.clue as string} required />
-                <select name={`custom_difficulty_${c.id}`}>
+              <div class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-[0.6rem]">
+                <input type="text" name={`custom_clue_${c.id}`} value={c.clue as string} required class="border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-base text-[#ccc] outline-none" />
+                <select name={`custom_difficulty_${c.id}`} class="border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-base text-[#ccc] outline-none">
                   {['hard', 'medium', 'easy'].map(level => <option value={level} selected={c.difficulty === level}>{level}</option>)}
                 </select>
-                <label class="remove"><input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
+                <label class="text-[0.75rem] text-[#755]"><input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
               </div>
             ))}
-            <button type="submit" class="btn-changes">save custom clues</button>
+            <button type="submit" class="cursor-pointer border border-[#333] bg-none px-4 py-2 font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#bbb]">save custom clues</button>
           </form>
         </div>
       )}
 
-      <div class="actions">
+      <div class="flex items-start gap-8">
         <form action="/api/admin/review" method="POST">
           <input type="hidden" name="slack_id" value={slack_id} />
           <input type="hidden" name="action" value="approve" />
-          <button type="submit" class="btn-approve">approve</button>
+          <button type="submit" class="cursor-pointer whitespace-nowrap border border-[#3a5a3a] bg-none px-5 py-2 font-sans text-[0.85rem] text-[#5a8a5a] transition-colors hover:border-[#5a8a5a] hover:text-[#7aaa7a]">approve</button>
         </form>
 
-        <form action="/api/admin/review" method="POST" class="changes-form">
+        <form action="/api/admin/review" method="POST" class="flex flex-1 flex-col gap-2">
           <input type="hidden" name="slack_id" value={slack_id} />
           <input type="hidden" name="action" value="request_changes" />
-          <textarea name="note" placeholder="what needs to change..." rows="3"></textarea>
-          <button type="submit" class="btn-changes">request changes</button>
+          <textarea name="note" placeholder="what needs to change..." rows="3" class="resize-y border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]"></textarea>
+          <button type="submit" class="cursor-pointer border border-[#333] bg-none px-4 py-2 font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#bbb]">request changes</button>
         </form>
       </div>
     </div>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
-  .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
-  nav {
-    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem;
-  }
-  nav a { color: #666; text-decoration: none; }
-  nav a:hover { color: #ccc; }
-  nav .logout { margin-left: auto; }
-
-  header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
-  .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; filter: grayscale(20%); }
-  h1 { font-size: 1.1rem; font-weight: normal; color: #ddd; margin-bottom: 0.15rem; }
-  .slack-id { font-size: 0.75rem; color: #555; font-family: ui-monospace, monospace; }
-
-  .photos { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
-  .photo-wrap {}
-  .photo-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #555; margin-bottom: 0.4rem; }
-  .photo {
-    width: 100%; aspect-ratio: 4/3;
-    object-fit: cover; display: block;
-    background: #161616; border: 1px solid #222;
-  }
-
-  .clues { margin-bottom: 2rem; }
-  .section-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 0.75rem; }
-  .clue { display: flex; gap: 1rem; padding: 0.5rem 0; border-top: 1px solid #1a1a1a; align-items: baseline; }
-  .clue-prompt { font-size: 0.75rem; color: #555; min-width: 140px; }
-  .clue-answer { font-size: 0.875rem; color: #ccc; }
-  .level { font-size: 0.62rem; color: #555; text-transform: uppercase; margin-left: 0.4rem; }
-  .custom-form { display: flex; flex-direction: column; gap: 0.65rem; align-items: flex-start; }
-  .custom-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; align-items: center; width: 100%; }
-  .custom-row input[type="text"], .custom-row select { background: #161616; border: 1px solid #2a2a2a; color: #ccc; padding: 0.5rem 0.65rem; font: inherit; }
-  .remove { color: #755; font-size: 0.75rem; }
-
-  .actions { display: flex; gap: 2rem; align-items: flex-start; }
-  .changes-form { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
-  textarea {
-    background: #161616; border: 1px solid #2a2a2a;
-    color: #ccc; font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem; padding: 0.5rem 0.65rem; resize: vertical;
-    outline: none;
-  }
-  textarea:focus { border-color: #444; }
-
-  .btn-approve {
-    background: none; border: 1px solid #3a5a3a; color: #5a8a5a;
-    font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem;
-    padding: 0.5rem 1.25rem; cursor: pointer; white-space: nowrap;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .btn-approve:hover { border-color: #5a8a5a; color: #7aaa7a; }
-  .btn-changes {
-    background: none; border: 1px solid #333; color: #888;
-    font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem;
-    padding: 0.5rem 1rem; cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .btn-changes:hover { border-color: #555; color: #bbb; }
-</style>

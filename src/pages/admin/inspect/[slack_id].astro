@@ -1,4 +1,5 @@
 ---
+import '../../../styles/global.css';
 import { db } from '../../../lib/db';
 
 const { slack_id } = Astro.params;
@@ -36,175 +37,120 @@ const currentStatus = user.onboarding_status as string;
     <meta name="viewport" content="width=device-width" />
     <title>pispy — inspect {user.display_name as string}</title>
   </head>
-  <body>
-    <div class="page">
-      <nav>
-        <a href="/admin/users">← users</a>
-        <a href="/admin/assignments">assignments</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+  <body class="bg-[#111] font-sans text-[#ccc]">
+    <div class="mx-auto max-w-[640px] px-6 pt-10 pb-16">
+      <nav class="mb-10 flex gap-6 border-b border-[#1e1e1e] pb-4 text-[0.8rem]">
+        <a href="/admin/users" class="text-[#666] no-underline hover:text-[#ccc]">← users</a>
+        <a href="/admin/assignments" class="text-[#666] no-underline hover:text-[#ccc]">assignments</a>
+        <a href="/api/auth/logout" class="ml-auto text-[#666] no-underline hover:text-[#ccc]">leave</a>
       </nav>
 
-      <header>
-        {user.avatar_url && <img src={user.avatar_url as string} alt="" class="avatar" />}
+      <header class="mb-10 flex items-center gap-4">
+        {user.avatar_url && <img src={user.avatar_url as string} alt="" class="h-12 w-12 rounded-full object-cover grayscale-[20%]" />}
         <div>
-          <h1>{user.display_name as string}</h1>
-          <p class="slack-id">{slack_id}</p>
+          <h1 class="mb-[0.15rem] text-[1.1rem] font-normal text-[#ddd]">{user.display_name as string}</h1>
+          <p class="font-mono text-[0.75rem] text-[#555]">{slack_id}</p>
         </div>
       </header>
 
       <!-- profile / status override -->
-      <section>
-        <p class="section-label">profile</p>
-        <form action="/api/admin/override" method="POST" class="stack">
+      <section class="mb-10 border-b border-[#1a1a1a] pb-10 last:border-b-0">
+        <p class="mb-4 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">profile</p>
+        <form action="/api/admin/override" method="POST" class="flex flex-col items-start gap-4">
           <input type="hidden" name="action" value="update_profile" />
           <input type="hidden" name="slack_id" value={slack_id} />
-          <label class="field">
-            <span>display name</span>
-            <input type="text" name="display_name" value={user.display_name as string} required />
+          <label class="flex w-full flex-col gap-[0.35rem]">
+            <span class="text-[0.7rem] text-[#666]">display name</span>
+            <input type="text" name="display_name" value={user.display_name as string} required class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]" />
           </label>
-          <label class="field">
-            <span>onboarding status</span>
-            <select name="onboarding_status">
+          <label class="flex w-full flex-col gap-[0.35rem]">
+            <span class="text-[0.7rem] text-[#666]">onboarding status</span>
+            <select name="onboarding_status" class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]">
               {statuses.map(s => (
                 <option value={s} selected={s === currentStatus}>{s.replace(/_/g, ' ')}</option>
               ))}
             </select>
           </label>
-          <label class="field">
-            <span>review note (shown to user on changes requested)</span>
-            <textarea name="review_note" rows="2">{(user.review_note as string) ?? ''}</textarea>
+          <label class="flex w-full flex-col gap-[0.35rem]">
+            <span class="text-[0.7rem] text-[#666]">review note (shown to user on changes requested)</span>
+            <textarea name="review_note" rows="2" class="w-full resize-y border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]">{(user.review_note as string) ?? ''}</textarea>
           </label>
-          <button type="submit" class="btn-save">save profile</button>
+          <button type="submit" class="cursor-pointer border border-[#333] bg-none px-5 py-[0.45rem] font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]">save profile</button>
         </form>
       </section>
 
-      <section>
-        <p class="section-label">custom clues</p>
-        {customClues.length === 0 ? <p class="empty">no custom clues</p> : (
-          <form action="/api/admin/override" method="POST" class="stack">
+      <section class="mb-10 border-b border-[#1a1a1a] pb-10 last:border-b-0">
+        <p class="mb-4 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">custom clues</p>
+        {customClues.length === 0 ? <p class="text-[0.9rem] text-[#555]">no custom clues</p> : (
+          <form action="/api/admin/override" method="POST" class="flex flex-col items-start gap-4">
             <input type="hidden" name="action" value="update_custom_clues" />
             <input type="hidden" name="slack_id" value={slack_id} />
             {customClues.map(c => (
-              <div class="custom-row">
-                <input type="text" name={`custom_clue_${c.id}`} value={c.clue as string} />
-                <select name={`custom_difficulty_${c.id}`}>{['hard', 'medium', 'easy'].map(level => <option value={level} selected={c.difficulty === level}>{level}</option>)}</select>
-                <label class="remove"><input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
+              <div class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-[0.6rem]">
+                <input type="text" name={`custom_clue_${c.id}`} value={c.clue as string} class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]" />
+                <select name={`custom_difficulty_${c.id}`} class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]">{['hard', 'medium', 'easy'].map(level => <option value={level} selected={c.difficulty === level}>{level}</option>)}</select>
+                <label class="text-[0.75rem] text-[#755]"><input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
               </div>
             ))}
-            <button type="submit" class="btn-save">save custom clues</button>
+            <button type="submit" class="cursor-pointer border border-[#333] bg-none px-5 py-[0.45rem] font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]">save custom clues</button>
           </form>
         )}
       </section>
 
       <!-- photo override -->
-      <section>
-        <p class="section-label">badge &amp; face</p>
-        <div class="photos">
-          <div class="photo-wrap">
-            <p class="photo-label">badge</p>
-            <img src={`/api/photos/${slack_id}/badge?cb=${cb}`} alt="badge photo" class="photo" />
+      <section class="mb-10 border-b border-[#1a1a1a] pb-10 last:border-b-0">
+        <p class="mb-4 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">badge &amp; face</p>
+        <div class="mb-5 grid grid-cols-2 gap-4">
+          <div>
+            <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.1em] text-[#555]">badge</p>
+            <img src={`/api/photos/${slack_id}/badge?cb=${cb}`} alt="badge photo" class="block aspect-[4/3] w-full border border-[#222] bg-[#161616] object-cover" />
           </div>
-          <div class="photo-wrap">
-            <p class="photo-label">face</p>
-            <img src={`/api/photos/${slack_id}/face?cb=${cb}`} alt="face photo" class="photo" />
+          <div>
+            <p class="mb-[0.4rem] text-[0.65rem] uppercase tracking-[0.1em] text-[#555]">face</p>
+            <img src={`/api/photos/${slack_id}/face?cb=${cb}`} alt="face photo" class="block aspect-[4/3] w-full border border-[#222] bg-[#161616] object-cover" />
           </div>
         </div>
-        <form action="/api/admin/override" method="POST" enctype="multipart/form-data" class="stack">
+        <form action="/api/admin/override" method="POST" enctype="multipart/form-data" class="flex flex-col items-start gap-4">
           <input type="hidden" name="action" value="update_photos" />
           <input type="hidden" name="slack_id" value={slack_id} />
-          <label class="field">
-            <span>replace badge photo</span>
-            <input type="file" name="badge_photo_file" accept="image/*" />
+          <label class="flex w-full flex-col gap-[0.35rem]">
+            <span class="text-[0.7rem] text-[#666]">replace badge photo</span>
+            <input type="file" name="badge_photo_file" accept="image/*" class="font-mono text-[0.75rem] text-[#888]" />
           </label>
-          <label class="field">
-            <span>replace face photo</span>
-            <input type="file" name="face_photo_file" accept="image/*" />
+          <label class="flex w-full flex-col gap-[0.35rem]">
+            <span class="text-[0.7rem] text-[#666]">replace face photo</span>
+            <input type="file" name="face_photo_file" accept="image/*" class="font-mono text-[0.75rem] text-[#888]" />
           </label>
-          <button type="submit" class="btn-save">save photos</button>
+          <button type="submit" class="cursor-pointer border border-[#333] bg-none px-5 py-[0.45rem] font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]">save photos</button>
         </form>
       </section>
 
       <!-- clue answers override -->
-      <section>
-        <p class="section-label">clue answers</p>
+      <section class="mb-10 border-b border-[#1a1a1a] pb-10 last:border-b-0">
+        <p class="mb-4 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">clue answers</p>
         {fields.length === 0 ? (
-          <p class="empty">no clue fields defined. add them under <a href="/admin/fields">fields</a>.</p>
+          <p class="text-[0.9rem] text-[#555]">no clue fields defined. add them under <a href="/admin/fields" class="text-[#888]">fields</a>.</p>
         ) : (
-          <form action="/api/admin/override" method="POST" class="stack">
+          <form action="/api/admin/override" method="POST" class="flex flex-col items-start gap-4">
             <input type="hidden" name="action" value="update_clues" />
             <input type="hidden" name="slack_id" value={slack_id} />
             {fields.map(f => (
-              <label class="field">
-                <span>{f.prompt as string}</span>
+              <label class="flex w-full flex-col gap-[0.35rem]">
+                <span class="text-[0.7rem] text-[#666]">{f.prompt as string}</span>
                 <input
                   type="text"
                   name={`clue_${f.id}`}
                   value={(f.answer as string) ?? ''}
                   autocomplete="off"
                   placeholder="(empty — clearing removes this clue)"
+                  class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]"
                 />
               </label>
             ))}
-            <button type="submit" class="btn-save">save clues</button>
+            <button type="submit" class="cursor-pointer border border-[#333] bg-none px-5 py-[0.45rem] font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]">save clues</button>
           </form>
         )}
       </section>
     </div>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
-  .page { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
-  nav {
-    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem;
-  }
-  nav a { color: #666; text-decoration: none; }
-  nav a:hover { color: #ccc; }
-  nav .logout { margin-left: auto; }
-
-  header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2.5rem; }
-  .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; filter: grayscale(20%); }
-  h1 { font-size: 1.1rem; font-weight: normal; color: #ddd; margin-bottom: 0.15rem; }
-  .slack-id { font-size: 0.75rem; color: #555; font-family: ui-monospace, monospace; }
-
-  section { margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 1px solid #1a1a1a; }
-  section:last-child { border-bottom: none; }
-  .section-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 1rem; }
-  .empty { font-size: 0.9rem; color: #555; }
-  .empty a { color: #888; }
-
-  .stack { display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
-  .field { display: flex; flex-direction: column; gap: 0.35rem; width: 100%; }
-  .field > span { font-size: 0.7rem; color: #666; }
-  .custom-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; width: 100%; align-items: center; }
-  .remove { color: #755; font-size: 0.75rem; }
-
-  input[type="text"], select, textarea {
-    background: #161616; border: 1px solid #2a2a2a; color: #ccc;
-    font-family: system-ui, -apple-system, sans-serif; font-size: 0.9rem; padding: 0.5rem 0.65rem;
-    outline: none; width: 100%; transition: border-color 0.2s;
-  }
-  input[type="text"], textarea { }
-  input[type="text"]:focus, select:focus, textarea:focus { border-color: #555; }
-  textarea { resize: vertical; }
-  input[type="file"] { font-family: ui-monospace, monospace; font-size: 0.75rem; color: #888; }
-
-  .photos { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
-  .photo-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #555; margin-bottom: 0.4rem; }
-  .photo {
-    width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
-    background: #161616; border: 1px solid #222;
-  }
-
-  .btn-save {
-    background: none; border: 1px solid #333; color: #888;
-    font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem;
-    padding: 0.45rem 1.25rem; cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .btn-save:hover { border-color: #555; color: #ccc; }
-</style>

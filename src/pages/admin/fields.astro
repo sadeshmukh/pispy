@@ -1,4 +1,5 @@
 ---
+import '../../styles/global.css';
 import { db } from '../../lib/db';
 
 const { rows: fields } = await db.execute(
@@ -13,50 +14,50 @@ const { rows: fields } = await db.execute(
     <meta name="viewport" content="width=device-width" />
     <title>pispy — fields</title>
   </head>
-  <body>
-    <div class="page">
-      <nav>
-        <a href="/admin">review</a>
-        <a href="/admin/users">users</a>
-        <a href="/admin/fields">fields</a>
-        <a href="/admin/assignments">assignments</a>
-        <a href="/leaderboard">leaderboard</a>
-        <a href="/api/auth/logout" class="logout">leave</a>
+  <body class="bg-[#111] font-sans text-[#ccc]">
+    <div class="mx-auto max-w-[700px] px-6 pt-10 pb-16">
+      <nav class="mb-10 flex gap-6 border-b border-[#1e1e1e] pb-4 text-[0.8rem]">
+        <a href="/admin" class="text-[#666] no-underline hover:text-[#ccc]">review</a>
+        <a href="/admin/users" class="text-[#666] no-underline hover:text-[#ccc]">users</a>
+        <a href="/admin/fields" class="text-[#666] no-underline hover:text-[#ccc]">fields</a>
+        <a href="/admin/assignments" class="text-[#666] no-underline hover:text-[#ccc]">assignments</a>
+        <a href="/leaderboard" class="text-[#666] no-underline hover:text-[#ccc]">leaderboard</a>
+        <a href="/api/auth/logout" class="ml-auto text-[#666] no-underline hover:text-[#ccc]">leave</a>
       </nav>
 
-      <h1>clue fields</h1>
-      <p class="sub">questions users answer during onboarding. these become clues others use to find them.</p>
+      <h1 class="mb-[0.4rem] text-base font-normal text-[#888]">clue fields</h1>
+      <p class="mb-7 text-[0.8rem] text-[#555]">questions users answer during onboarding. these become clues others use to find them.</p>
 
       {fields.length > 0 && (
-        <table>
+        <table class="mb-8 w-full border-collapse [&_td]:border-t [&_td]:border-[#1a1a1a] [&_td]:py-2 [&_td]:align-middle [&_th]:pb-2 [&_th]:text-left [&_th]:text-[0.65rem] [&_th]:font-normal [&_th]:uppercase [&_th]:tracking-[0.1em] [&_th]:text-[#444]">
           <thead>
             <tr><th>order</th><th>question</th><th></th></tr>
           </thead>
           <tbody>
             {fields.map(f => (
               <tr>
-                <td class="muted mono">{f.field_order as number}</td>
+                <td class="font-mono text-[0.8rem] text-[#555]">{f.field_order as number}</td>
                 <td>
-                  <form action="/api/admin/fields" method="POST" class="inline-form">
+                  <form action="/api/admin/fields" method="POST" class="flex items-center gap-2">
                     <input type="hidden" name="action" value="update" />
                     <input type="hidden" name="id" value={f.id as number} />
-                    <input type="text" name="prompt" value={f.prompt as string} />
-                    <select name="difficulty" aria-label="difficulty">
+                    <input type="text" name="prompt" value={f.prompt as string} class="flex-1 border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+                    <select name="difficulty" aria-label="difficulty" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none">
                       {['hard', 'medium', 'easy'].map(level => <option value={level} selected={f.difficulty === level}>{level}</option>)}
                     </select>
-                    <select name="question_type" aria-label="answer type">
+                    <select name="question_type" aria-label="answer type" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none">
                       <option value="text" selected={f.question_type === 'text'}>text</option>
                       <option value="yes_no" selected={f.question_type === 'yes_no'}>yes / no</option>
                     </select>
-                    <input type="number" name="field_order" value={f.field_order as number} class="order-input" />
-                    <button type="submit" class="btn-ghost">save</button>
+                    <input type="number" name="field_order" value={f.field_order as number} class="w-[52px] flex-none border border-[#2a2a2a] bg-[#161616] px-[0.4rem] py-[0.35rem] font-mono text-[0.75rem] text-[#555] outline-none [-moz-appearance:textfield]" />
+                    <button type="submit" class="cursor-pointer whitespace-nowrap border-none bg-none py-[0.2rem] font-sans text-[0.8rem] text-[#555] hover:text-[#999]">save</button>
                   </form>
                 </td>
                 <td>
                   <form action="/api/admin/fields" method="POST">
                     <input type="hidden" name="action" value="delete" />
                     <input type="hidden" name="id" value={f.id as number} />
-                    <button type="submit" class="btn-delete">remove</button>
+                    <button type="submit" class="cursor-pointer border-none bg-none py-[0.2rem] font-sans text-[0.8rem] text-[#5a3a3a] hover:text-[#aa6a6a]">remove</button>
                   </form>
                 </td>
               </tr>
@@ -65,80 +66,18 @@ const { rows: fields } = await db.execute(
         </table>
       )}
 
-      {fields.length === 0 && <p class="empty">no fields yet</p>}
+      {fields.length === 0 && <p class="mb-8 text-[0.9rem] text-[#444]">no fields yet</p>}
 
-      <div class="add-section">
-        <p class="add-label">add field</p>
-        <form action="/api/admin/fields" method="POST" class="add-form">
+      <div class="mt-6 border-t border-[#1e1e1e] pt-6">
+        <p class="mb-3 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">add field</p>
+        <form action="/api/admin/fields" method="POST" class="flex gap-3">
           <input type="hidden" name="action" value="create" />
-          <input type="text" name="prompt" placeholder="e.g. what do you usually wear?" required />
-          <select name="difficulty" aria-label="difficulty"><option value="hard">hard</option><option value="medium" selected>medium</option><option value="easy">easy</option></select>
-          <select name="question_type" aria-label="answer type"><option value="text">text</option><option value="yes_no">yes / no</option></select>
-          <button type="submit" class="btn-add">add</button>
+          <input type="text" name="prompt" placeholder="e.g. what do you usually wear?" required class="flex-1 border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+          <select name="difficulty" aria-label="difficulty" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none"><option value="hard">hard</option><option value="medium" selected>medium</option><option value="easy">easy</option></select>
+          <select name="question_type" aria-label="answer type" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none"><option value="text">text</option><option value="yes_no">yes / no</option></select>
+          <button type="submit" class="cursor-pointer whitespace-nowrap border border-[#333] bg-none px-4 py-[0.35rem] font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]">add</button>
         </form>
       </div>
     </div>
   </body>
 </html>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #111; color: #ccc; font-family: system-ui, -apple-system, sans-serif; }
-  .page { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
-  nav {
-    display: flex; gap: 1.5rem; margin-bottom: 2.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e1e1e;
-    font-size: 0.8rem;
-  }
-  nav a { color: #666; text-decoration: none; }
-  nav a:hover { color: #ccc; }
-  nav .logout { margin-left: auto; }
-  h1 { font-size: 1rem; font-weight: normal; color: #888; margin-bottom: 0.4rem; }
-  .sub { font-size: 0.8rem; color: #555; margin-bottom: 1.75rem; }
-
-  table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
-  th { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; font-weight: normal; padding: 0 0 0.5rem; text-align: left; }
-  td { padding: 0.5rem 0; border-top: 1px solid #1a1a1a; vertical-align: middle; }
-  .muted { color: #555; font-size: 0.8rem; }
-  .mono { font-family: ui-monospace, monospace; }
-
-  .inline-form { display: flex; gap: 0.5rem; align-items: center; }
-  input[type="text"], select {
-    background: #161616; border: 1px solid #2a2a2a; color: #ccc;
-    font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem;
-    padding: 0.35rem 0.6rem; outline: none; flex: 1;
-  }
-  select { flex: none; width: auto; }
-  input[type="text"]:focus { border-color: #444; }
-  .order-input {
-    background: #161616; border: 1px solid #2a2a2a; color: #555;
-    font-family: ui-monospace, monospace; font-size: 0.75rem;
-    padding: 0.35rem 0.4rem; outline: none; width: 52px; flex: none;
-  }
-  input[type="number"] { -moz-appearance: textfield; }
-
-  .btn-ghost {
-    background: none; border: none; color: #555; font-family: system-ui, -apple-system, sans-serif;
-    font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0;
-    white-space: nowrap;
-  }
-  .btn-ghost:hover { color: #999; }
-  .btn-delete {
-    background: none; border: none; color: #5a3a3a; font-family: system-ui, -apple-system, sans-serif;
-    font-size: 0.8rem; cursor: pointer; padding: 0.2rem 0;
-  }
-  .btn-delete:hover { color: #aa6a6a; }
-
-  .empty { font-size: 0.9rem; color: #444; margin-bottom: 2rem; }
-
-  .add-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #1e1e1e; }
-  .add-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #444; margin-bottom: 0.75rem; }
-  .add-form { display: flex; gap: 0.75rem; }
-  .btn-add {
-    background: none; border: 1px solid #333; color: #888;
-    font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem;
-    padding: 0.35rem 1rem; cursor: pointer; white-space: nowrap;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .btn-add:hover { border-color: #555; color: #ccc; }
-</style>
