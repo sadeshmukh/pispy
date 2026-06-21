@@ -137,7 +137,7 @@ const { rows: customClues } = await db.execute({
 
         <div class="mb-7 border border-[#262626] bg-[#141414] p-5 max-[420px]:p-4">
           <p class="mb-2 text-[0.7rem] uppercase tracking-[0.12em] text-[#888]">your own clues <span class="float-right normal-case tracking-normal text-[#555]">optional</span></p>
-          <p class="mb-[1.1rem] text-[0.8rem] leading-[1.5] text-[#555]">Add anything about you that might make the hunt more fun. Pick how easy it makes you to identify.</p>
+          <p class="mb-[1.1rem] text-[0.8rem] leading-[1.5] text-[#555]">Write your own clue!! Easy means that easy to link to you(generic/common attribute), hard means uniqueness</p>
           <div id="custom-clues" class="[counter-reset:custom-clue]">
             {customClues.map((clue, index) => (
               <div class="custom-clue-row mb-[0.65rem] grid grid-cols-[28px_1fr_28px] items-center gap-[0.65rem] border border-[#292929] bg-[#181818] p-3 transition-colors [counter-increment:custom-clue] focus-within:border-[#444] focus-within:bg-[#1a1a1a] max-[420px]:grid-cols-[1fr_28px]">
