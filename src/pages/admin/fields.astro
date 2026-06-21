@@ -2,7 +2,7 @@
 import { db } from '../../lib/db';
 
 const { rows: fields } = await db.execute(
-  'SELECT id, prompt, field_order FROM clue_fields ORDER BY field_order, id'
+  'SELECT id, prompt, field_order, difficulty, question_type FROM clue_fields ORDER BY field_order, id'
 );
 ---
 
@@ -30,7 +30,7 @@ const { rows: fields } = await db.execute(
       {fields.length > 0 && (
         <table>
           <thead>
-            <tr><th>order</th><th>prompt</th><th></th></tr>
+            <tr><th>order</th><th>question</th><th></th></tr>
           </thead>
           <tbody>
             {fields.map(f => (
@@ -41,6 +41,13 @@ const { rows: fields } = await db.execute(
                     <input type="hidden" name="action" value="update" />
                     <input type="hidden" name="id" value={f.id as number} />
                     <input type="text" name="prompt" value={f.prompt as string} />
+                    <select name="difficulty" aria-label="difficulty">
+                      {['hard', 'medium', 'easy'].map(level => <option value={level} selected={f.difficulty === level}>{level}</option>)}
+                    </select>
+                    <select name="question_type" aria-label="answer type">
+                      <option value="text" selected={f.question_type === 'text'}>text</option>
+                      <option value="yes_no" selected={f.question_type === 'yes_no'}>yes / no</option>
+                    </select>
                     <input type="number" name="field_order" value={f.field_order as number} class="order-input" />
                     <button type="submit" class="btn-ghost">save</button>
                   </form>
@@ -65,6 +72,8 @@ const { rows: fields } = await db.execute(
         <form action="/api/admin/fields" method="POST" class="add-form">
           <input type="hidden" name="action" value="create" />
           <input type="text" name="prompt" placeholder="e.g. what do you usually wear?" required />
+          <select name="difficulty" aria-label="difficulty"><option value="hard">hard</option><option value="medium" selected>medium</option><option value="easy">easy</option></select>
+          <select name="question_type" aria-label="answer type"><option value="text">text</option><option value="yes_no">yes / no</option></select>
           <button type="submit" class="btn-add">add</button>
         </form>
       </div>
@@ -94,11 +103,12 @@ const { rows: fields } = await db.execute(
   .mono { font-family: ui-monospace, monospace; }
 
   .inline-form { display: flex; gap: 0.5rem; align-items: center; }
-  input[type="text"] {
+  input[type="text"], select {
     background: #161616; border: 1px solid #2a2a2a; color: #ccc;
     font-family: system-ui, -apple-system, sans-serif; font-size: 0.85rem;
     padding: 0.35rem 0.6rem; outline: none; flex: 1;
   }
+  select { flex: none; width: auto; }
   input[type="text"]:focus { border-color: #444; }
   .order-input {
     background: #161616; border: 1px solid #2a2a2a; color: #555;

@@ -18,6 +18,10 @@ const { rows: fields } = await db.execute({
         ORDER BY cf.field_order, cf.id`,
   args: [slack_id!],
 });
+const { rows: customClues } = await db.execute({
+  sql: 'SELECT id, clue, difficulty FROM custom_clues WHERE slack_id = ? ORDER BY id',
+  args: [slack_id!],
+});
 
 // Cache-bust the photo URLs so a fresh upload shows immediately.
 const cb = Date.now();
@@ -72,6 +76,24 @@ const currentStatus = user.onboarding_status as string;
           </label>
           <button type="submit" class="btn-save">save profile</button>
         </form>
+      </section>
+
+      <section>
+        <p class="section-label">custom clues</p>
+        {customClues.length === 0 ? <p class="empty">no custom clues</p> : (
+          <form action="/api/admin/override" method="POST" class="stack">
+            <input type="hidden" name="action" value="update_custom_clues" />
+            <input type="hidden" name="slack_id" value={slack_id} />
+            {customClues.map(c => (
+              <div class="custom-row">
+                <input type="text" name={`custom_clue_${c.id}`} value={c.clue as string} />
+                <select name={`custom_difficulty_${c.id}`}>{['hard', 'medium', 'easy'].map(level => <option value={level} selected={c.difficulty === level}>{level}</option>)}</select>
+                <label class="remove"><input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
+              </div>
+            ))}
+            <button type="submit" class="btn-save">save custom clues</button>
+          </form>
+        )}
       </section>
 
       <!-- photo override -->
@@ -158,6 +180,8 @@ const currentStatus = user.onboarding_status as string;
   .stack { display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
   .field { display: flex; flex-direction: column; gap: 0.35rem; width: 100%; }
   .field > span { font-size: 0.7rem; color: #666; }
+  .custom-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; width: 100%; align-items: center; }
+  .remove { color: #755; font-size: 0.75rem; }
 
   input[type="text"], select, textarea {
     background: #161616; border: 1px solid #2a2a2a; color: #ccc;

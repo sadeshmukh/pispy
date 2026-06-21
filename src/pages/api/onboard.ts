@@ -62,19 +62,39 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     args: [badgeBlob, badgeMime, faceBlob, faceMime, session.slack_id],
   });
 
-  // upsert clue answers
-  const fieldIds = [...formData.keys()]
-    .filter(k => k.startsWith('clue_'))
-    .map(k => parseInt(k.slice(5)));
+  // Upsert standard clue answers. Yes/no questions store a useful, readable
+  // answer while only requiring elaboration for "yes".
+  const { rows: fields } = await db.execute('SELECT id, question_type FROM clue_fields');
 
-  for (const fieldId of fieldIds) {
-    const answer = (formData.get(`clue_${fieldId}`) as string)?.trim();
-    if (!answer) continue;
-    await db.execute({
-      sql: `INSERT INTO user_clues (slack_id, field_id, answer) VALUES (?, ?, ?)
-            ON CONFLICT (slack_id, field_id) DO UPDATE SET answer = excluded.answer`,
-      args: [session.slack_id, fieldId, answer],
-    });
+  for (const field of fields) {
+    const fieldId = field.id as number;
+    let answer = (formData.get(`clue_${fieldId}`) as string)?.trim() ?? '';
+    if (field.question_type === 'yes_no') {
+      const choice = formData.get(`clue_choice_${fieldId}`);
+      const detail = (formData.get(`clue_elaboration_${fieldId}`) as string)?.trim();
+      answer = choice === 'no' ? 'No' : choice === 'yes' && detail ? `Yes — ${detail}` : '';
+    }
+    if (answer) {
+      await db.execute({
+        sql: `INSERT INTO user_clues (slack_id, field_id, answer) VALUES (?, ?, ?)
+              ON CONFLICT (slack_id, field_id) DO UPDATE SET answer = excluded.answer`,
+        args: [session.slack_id, fieldId, answer],
+      });
+    } else {
+      await db.execute({ sql: 'DELETE FROM user_clues WHERE slack_id = ? AND field_id = ?', args: [session.slack_id, fieldId] });
+    }
+  }
+
+  // Replacing the user's optional list makes removals and reordering explicit.
+  await db.execute({ sql: 'DELETE FROM custom_clues WHERE slack_id = ?', args: [session.slack_id] });
+  const customKeys = [...formData.keys()].filter(k => /^custom_clue_\d+$/.test(k));
+  for (const key of customKeys) {
+    const index = key.slice('custom_clue_'.length);
+    const clue = (formData.get(key) as string)?.trim();
+    if (!clue) continue;
+    const rawDifficulty = String(formData.get(`custom_difficulty_${index}`));
+    const difficulty = ['hard', 'medium', 'easy'].includes(rawDifficulty) ? rawDifficulty : 'medium';
+    await db.execute({ sql: 'INSERT INTO custom_clues (slack_id, clue, difficulty) VALUES (?, ?, ?)', args: [session.slack_id, clue, difficulty] });
   }
 
   return redirect('/');

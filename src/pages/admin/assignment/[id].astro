@@ -148,6 +148,7 @@ const cb = Date.now();
                 <span class="dot" />
                 <div class="clue-body">
                   <span class="clue-prompt">{c.prompt}</span>
+                  <span class="clue-level">{c.difficulty}</span>
                   <span class="clue-answer">{c.answer}</span>
                 </div>
                 <div class="clue-action">
@@ -251,6 +252,7 @@ const cb = Date.now();
   .clue.off .clue-answer { color: #666; }
   .clue-body { flex: 1; }
   .clue-prompt { display: block; font-size: 0.72rem; color: #888; margin-bottom: 0.25rem; }
+  .clue-level { font-size: 0.62rem; color: #555; margin-right: 0.5rem; text-transform: uppercase; }
   .clue-answer { display: block; font-size: 0.9rem; color: #ccc; }
   .clue-action { display: flex; align-items: center; gap: 0.75rem; }
 

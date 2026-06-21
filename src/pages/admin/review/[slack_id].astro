@@ -12,11 +12,15 @@ if (!rows[0]) return Astro.redirect('/admin');
 const user = rows[0];
 
 const { rows: clues } = await db.execute({
-  sql: `SELECT cf.prompt, uc.answer
+  sql: `SELECT cf.prompt, uc.answer, cf.difficulty, cf.question_type
         FROM user_clues uc
         JOIN clue_fields cf ON cf.id = uc.field_id
         WHERE uc.slack_id = ?
         ORDER BY cf.field_order, cf.id`,
+  args: [slack_id!],
+});
+const { rows: customClues } = await db.execute({
+  sql: 'SELECT id, clue, difficulty FROM custom_clues WHERE slack_id = ? ORDER BY id',
   args: [slack_id!],
 });
 ---
@@ -64,9 +68,29 @@ const { rows: clues } = await db.execute({
           {clues.map(c => (
             <div class="clue">
               <span class="clue-prompt">{c.prompt as string}</span>
-              <span class="clue-answer">{c.answer as string}</span>
+              <span class="clue-answer">{c.answer as string} <span class="level">{c.difficulty as string}</span></span>
             </div>
           ))}
+        </div>
+      )}
+
+      {customClues.length > 0 && (
+        <div class="clues">
+          <p class="section-label">custom clues — editable before approval</p>
+          <form action="/api/admin/review" method="POST" class="custom-form">
+            <input type="hidden" name="slack_id" value={slack_id} />
+            <input type="hidden" name="action" value="save_custom_clues" />
+            {customClues.map(c => (
+              <div class="custom-row">
+                <input type="text" name={`custom_clue_${c.id}`} value={c.clue as string} required />
+                <select name={`custom_difficulty_${c.id}`}>
+                  {['hard', 'medium', 'easy'].map(level => <option value={level} selected={c.difficulty === level}>{level}</option>)}
+                </select>
+                <label class="remove"><input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
+              </div>
+            ))}
+            <button type="submit" class="btn-changes">save custom clues</button>
+          </form>
         </div>
       )}
 
@@ -120,6 +144,11 @@ const { rows: clues } = await db.execute({
   .clue { display: flex; gap: 1rem; padding: 0.5rem 0; border-top: 1px solid #1a1a1a; align-items: baseline; }
   .clue-prompt { font-size: 0.75rem; color: #555; min-width: 140px; }
   .clue-answer { font-size: 0.875rem; color: #ccc; }
+  .level { font-size: 0.62rem; color: #555; text-transform: uppercase; margin-left: 0.4rem; }
+  .custom-form { display: flex; flex-direction: column; gap: 0.65rem; align-items: flex-start; }
+  .custom-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; align-items: center; width: 100%; }
+  .custom-row input[type="text"], .custom-row select { background: #161616; border: 1px solid #2a2a2a; color: #ccc; padding: 0.5rem 0.65rem; font: inherit; }
+  .remove { color: #755; font-size: 0.75rem; }
 
   .actions { display: flex; gap: 2rem; align-items: flex-start; }
   .changes-form { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }

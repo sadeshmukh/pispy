@@ -18,7 +18,7 @@ if (status === 'approved' || status === 'pending_review') {
 }
 
 const { rows: fieldRows } = await db.execute(
-  'SELECT id, prompt FROM clue_fields ORDER BY field_order, id'
+  'SELECT id, prompt, difficulty, question_type FROM clue_fields ORDER BY field_order, id'
 );
 
 const { rows: clueRows } = await db.execute({
@@ -28,6 +28,10 @@ const { rows: clueRows } = await db.execute({
 const existingClues: Record<string, string> = Object.fromEntries(
   clueRows.map(r => [String(r.field_id), r.answer as string])
 );
+const { rows: customClues } = await db.execute({
+  sql: 'SELECT id, clue, difficulty FROM custom_clues WHERE slack_id = ? ORDER BY id',
+  args: [session.slack_id],
+});
 ---
 
 <!doctype html>
@@ -106,18 +110,56 @@ const existingClues: Record<string, string> = Object.fromEntries(
             <p class="section-title">clues</p>
             {fieldRows.map(field => (
               <div class="section">
-                <label for={`field-${field.id}`}>{field.prompt as string}</label>
-                <input
-                  type="text"
-                  id={`field-${field.id}`}
-                  name={`clue_${field.id}`}
-                  value={existingClues[String(field.id)] ?? ''}
-                  autocomplete="off"
-                />
+                <label for={`field-${field.id}`}>{field.prompt as string}
+                {field.question_type === 'yes_no' ? (
+                  <div class="yes-no" data-yes-no>
+                    <div class="choice-row">
+                      <label class="choice-no"><input type="radio" name={`clue_choice_${field.id}`} value="no" checked={existingClues[String(field.id)] === 'No'} /><span>no</span></label>
+                      <label class="choice-yes"><input type="radio" name={`clue_choice_${field.id}`} value="yes" checked={(existingClues[String(field.id)] ?? '').startsWith('Yes')} /><span>yes</span></label>
+                    </div>
+                    <input type="text" name={`clue_elaboration_${field.id}`} value={(existingClues[String(field.id)] ?? '').replace(/^Yes\s*[—-]?\s*/, '')} placeholder="elaborate pls" data-elaboration />
+                  </div>
+                ) : (
+                  <input type="text" id={`field-${field.id}`} name={`clue_${field.id}`} value={existingClues[String(field.id)] ?? ''} autocomplete="off" />
+                )}
               </div>
             ))}
           </div>
         )}
+
+        <div class="clues-section custom-section">
+          <p class="section-title">your own clues <span>optional</span></p>
+          <p class="hint">Add anything about you that might make the hunt more fun. Pick how easy it makes you to identify.</p>
+          <div id="custom-clues">
+            {customClues.map((clue, index) => (
+              <div class="custom-clue-row">
+                <span class="custom-clue-number" aria-hidden="true"></span>
+                <div class="custom-clue-fields">
+                  <input type="text" name={`custom_clue_${index}`} value={clue.clue as string} placeholder="e.g. I always carry a red water bottle" aria-label="custom clue" />
+                  <select name={`custom_difficulty_${index}`} aria-label="clue difficulty">
+                    {['hard', 'medium', 'easy'].map(level => <option value={level} selected={clue.difficulty === level}>{level}</option>)}
+                  </select>
+                </div>
+                <button type="button" class="remove-clue" aria-label="remove clue">×</button>
+              </div>
+            ))}
+          </div>
+          <template id="custom-clue-template">
+            <div class="custom-clue-row">
+              <span class="custom-clue-number" aria-hidden="true"></span>
+              <div class="custom-clue-fields">
+                <input type="text" placeholder="e.g. I always carry a red water bottle" aria-label="custom clue" />
+                <select aria-label="clue difficulty">
+                  <option value="hard">hard</option>
+                  <option value="medium" selected>medium</option>
+                  <option value="easy">easy</option>
+                </select>
+              </div>
+              <button type="button" class="remove-clue" aria-label="remove clue">×</button>
+            </div>
+          </template>
+          <button type="button" id="add-custom-clue"><span>+</span> add another clue</button>
+        </div>
 
         <div class="submit-row">
           <button type="submit" class="btn-submit">submit for review</button>
@@ -206,6 +248,38 @@ const existingClues: Record<string, string> = Object.fromEntries(
       setupPhotoField('badge');
       setupPhotoField('face');
 
+      function syncYesNo() {
+        document.querySelectorAll<HTMLElement>('[data-yes-no]').forEach(group => {
+          const yes = group.querySelector<HTMLInputElement>('input[value="yes"]');
+          const elaboration = group.querySelector<HTMLInputElement>('[data-elaboration]');
+          if (!yes || !elaboration) return;
+          elaboration.hidden = !yes.checked;
+          elaboration.required = yes.checked;
+        });
+      }
+      document.querySelectorAll('[data-yes-no] input[type="radio"]').forEach(input => input.addEventListener('change', syncYesNo));
+      syncYesNo();
+
+      const customContainer = document.getElementById('custom-clues')!;
+      const addCustom = document.getElementById('add-custom-clue')!;
+      const customTemplate = document.getElementById('custom-clue-template') as HTMLTemplateElement;
+      let customIndex = customContainer.children.length;
+      function wireRemove(button: Element) {
+        button.addEventListener('click', () => button.closest('.custom-clue-row')?.remove());
+      }
+      document.querySelectorAll('.remove-clue').forEach(wireRemove);
+      addCustom.addEventListener('click', () => {
+        const row = customTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
+        const clueInput = row.querySelector<HTMLInputElement>('input[type="text"]')!;
+        const difficultySelect = row.querySelector<HTMLSelectElement>('select')!;
+        clueInput.name = `custom_clue_${customIndex}`;
+        difficultySelect.name = `custom_difficulty_${customIndex}`;
+        customIndex += 1;
+        customContainer.appendChild(row);
+        wireRemove(row.querySelector('.remove-clue')!);
+        clueInput.focus();
+      });
+
       // hide fallback file inputs (they're JS-only fallback for no-JS)
       document.querySelectorAll('.fallback-file').forEach(el => {
         (el as HTMLElement).style.display = 'none';
@@ -280,6 +354,122 @@ const existingClues: Record<string, string> = Object.fromEntries(
     border-top: 1px solid #1e1e1e;
   }
   .clues-section { margin-bottom: 1.75rem; }
+  .section-title span { float: right; color: #555; text-transform: lowercase; letter-spacing: 0; }
+  .difficulty { margin-left: 0.4rem; color: #444; text-transform: lowercase; letter-spacing: 0; }
+  .choice-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    padding: 3px;
+    margin-bottom: 0.65rem;
+    overflow: hidden;
+    border: 1px solid #303030;
+    border-radius: 999px;
+    background: #161616;
+  }
+  .choice-row::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    top: 3px;
+    left: 3px;
+    width: calc(50% - 3px);
+    height: calc(100% - 6px);
+    border-radius: 999px;
+    opacity: 0;
+    background: #713535;YOU
+    transition: transform 180ms ease, background 180ms ease, opacity 180ms ease;
+  }
+  .choice-row:has(.choice-no input:checked)::before { opacity: 1; transform: translateX(0); background: #713535; }
+  .choice-row:has(.choice-yes input:checked)::before { opacity: 1; transform: translateX(100%); background: #356b48; }
+  .choice-row label {
+    position: relative;
+    z-index: 1;
+    padding: 0.45rem 1rem;
+    color: #777;
+    font-size: 0.82rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    user-select: none;
+    transition: color 180ms ease;
+  }
+  .choice-row input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+  .choice-no:has(input:checked), .choice-yes:has(input:checked) { color: #fff; }
+  .choice-row:focus-within { border-color: #555; }
+  [data-elaboration][hidden] { display: none; }
+  .custom-section {
+    margin-top: 2.5rem;
+    padding: 1.25rem;
+    border: 1px solid #262626;
+    background: #141414;
+  }
+  .custom-section .section-title {
+    padding-top: 0;
+    margin-bottom: 0.5rem;
+    border-top: 0;
+    color: #888;
+  }
+  .custom-section > .hint { margin-bottom: 1.1rem; line-height: 1.5; }
+  #custom-clues { counter-reset: custom-clue; }
+  .custom-clue-row {
+    counter-increment: custom-clue;
+    display: grid;
+    grid-template-columns: 28px 1fr 28px;
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.65rem;
+    border: 1px solid #292929;
+    background: #181818;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .custom-clue-row:focus-within { border-color: #444; background: #1a1a1a; }
+  .custom-clue-number {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #303030;
+    border-radius: 50%;
+    color: #666;
+    font: 0.68rem ui-monospace, monospace;
+  }
+  .custom-clue-number::before { content: counter(custom-clue, decimal-leading-zero); }
+  .custom-clue-fields { display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: 0.5rem; }
+  .custom-clue-row input[type="text"] { background: #121212; }
+  .custom-clue-row select { width: 100%; background: #121212; cursor: pointer; text-transform: capitalize; }
+  .remove-clue {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    color: #633;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+  }
+  .remove-clue:hover { color: #c77; background: #241818; }
+  #add-custom-clue {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: 1px dashed #353535;
+    background: #171717;
+    color: #777;
+    font: 0.82rem system-ui, -apple-system, sans-serif;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+  #add-custom-clue span { margin-right: 0.35rem; color: #999; font-size: 1rem; }
+  #add-custom-clue:hover { border-color: #555; background: #1b1b1b; color: #bbb; }
 
   input[type="text"] {
     width: 100%;
@@ -294,6 +484,7 @@ const existingClues: Record<string, string> = Object.fromEntries(
     transition: border-color 0.2s;
   }
   input[type="text"]:focus { border-color: #555; }
+  select { background: #161616; border: 1px solid #2a2a2a; color: #aaa; padding: 0.5rem; }
 
   .photo-field { }
   .photo-preview-wrap {
@@ -358,4 +549,11 @@ const existingClues: Record<string, string> = Object.fromEntries(
   .btn-submit:hover { color: #fff; border-color: #888; }
 
   .fallback-file { display: none; }
+
+  @media (max-width: 420px) {
+    .custom-section { padding: 1rem; }
+    .custom-clue-row { grid-template-columns: 1fr 28px; }
+    .custom-clue-number { display: none; }
+    .custom-clue-fields { grid-template-columns: 1fr; }
+  }
 </style>

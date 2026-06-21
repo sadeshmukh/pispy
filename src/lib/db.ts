@@ -1,5 +1,9 @@
 import { createClient } from '@libsql/client';
 
+// Bump this whenever initDb gains a migration. Middleware uses it to rerun
+// initialization after a hot reload instead of keeping a stale "ready" flag.
+export const DB_SCHEMA_VERSION = 2;
+
 export const db = createClient({
   url: import.meta.env.TURSO_URL,
   authToken: import.meta.env.TURSO_AUTH_TOKEN,
@@ -23,6 +27,8 @@ export async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       prompt TEXT NOT NULL,
       field_order INTEGER NOT NULL DEFAULT 0,
+      difficulty TEXT NOT NULL DEFAULT 'medium',
+      question_type TEXT NOT NULL DEFAULT 'text',
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
     CREATE TABLE IF NOT EXISTS user_clues (
@@ -50,6 +56,13 @@ export async function initDb() {
       released_at INTEGER NOT NULL DEFAULT (unixepoch()),
       PRIMARY KEY (assignment_id, field_id)
     );
+    CREATE TABLE IF NOT EXISTS custom_clues (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slack_id TEXT NOT NULL,
+      clue TEXT NOT NULL,
+      difficulty TEXT NOT NULL DEFAULT 'medium',
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
   `);
 
   // Idempotent migrations for databases created before the capture/score
@@ -61,6 +74,8 @@ export async function initDb() {
     `ALTER TABLE assignments ADD COLUMN submission_photo BLOB`,
     `ALTER TABLE assignments ADD COLUMN submission_photo_mime TEXT`,
     `ALTER TABLE assignments ADD COLUMN review_note TEXT`,
+    `ALTER TABLE clue_fields ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'medium'`,
+    `ALTER TABLE clue_fields ADD COLUMN question_type TEXT NOT NULL DEFAULT 'text'`,
   ];
   for (const sql of migrations) {
     try {

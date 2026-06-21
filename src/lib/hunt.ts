@@ -20,9 +20,11 @@ export type Assignment = {
 };
 
 export type Clue = {
-  id: number; // clue_fields.id
+  id: number; // standard field id, or negative custom_clues id
   prompt: string;
   answer: string;
+  difficulty: 'hard' | 'medium' | 'easy';
+  custom: boolean;
 };
 
 function rowToAssignment(row: Record<string, unknown> | undefined): Assignment | null {
@@ -61,15 +63,23 @@ export async function getAssignmentForHunter(hunter_id: string): Promise<Assignm
 
 // The target's answered clues, in the order they should be revealed.
 export async function getTargetClues(target_id: string): Promise<Clue[]> {
-  const { rows } = await db.execute({
-    sql: `SELECT cf.id, cf.prompt, uc.answer
+  const [{ rows: standard }, { rows: custom }] = await Promise.all([
+    db.execute({
+    sql: `SELECT cf.id, cf.prompt, uc.answer, cf.difficulty, cf.field_order
           FROM user_clues uc
           JOIN clue_fields cf ON cf.id = uc.field_id
           WHERE uc.slack_id = ?
           ORDER BY cf.field_order, cf.id`,
     args: [target_id],
-  });
-  return rows.map(r => ({ id: r.id as number, prompt: r.prompt as string, answer: r.answer as string }));
+    }),
+    db.execute({ sql: 'SELECT id, clue, difficulty FROM custom_clues WHERE slack_id = ? ORDER BY id', args: [target_id] }),
+  ]);
+  const rank: Record<string, number> = { hard: 0, medium: 1, easy: 2 };
+  return [
+    ...standard.map(r => ({ id: r.id as number, prompt: r.prompt as string, answer: r.answer as string, difficulty: r.difficulty as Clue['difficulty'], custom: false, order: r.field_order as number })),
+    ...custom.map(r => ({ id: -(r.id as number), prompt: 'Custom clue', answer: r.clue as string, difficulty: r.difficulty as Clue['difficulty'], custom: true, order: 1_000_000 + (r.id as number) })),
+  ].sort((a, b) => (rank[a.difficulty] ?? 1) - (rank[b.difficulty] ?? 1) || a.order - b.order || a.id - b.id)
+    .map(({ order: _order, ...clue }) => clue);
 }
 
 export async function getReleasedFieldIds(assignmentId: number): Promise<Set<number>> {
