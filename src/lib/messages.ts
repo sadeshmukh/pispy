@@ -26,9 +26,9 @@ export const messages = {
 	// A hunt just went live. The hunter learns who they're after and sees every
 	// clue in the app; the target only learns that *someone* is now hunting them.
 	huntStartedHunter: (targetName: string) =>
-		`:dart: GAME START YO Your hunt is live - your target is *${targetName}*. All their clues are in the app. The clock's ticking, and your score drops the longer it takes. Go get 'em. :camera_with_flash:`,
+		`:dart: GAME START YO Your hunt is live. the target is *${targetName}*.  Go get 'em. ... fast`,
 	huntStartedTarget: () =>
-		":fear: Someone has been assigned to hunt *you*. You don't get to know who. . :eyes: don't get killed (/silly) (DO NOT HIDE IN THE BATHROOM)",
+		":fear: Someone has been assigned to hunt *you* . You don't get to know who. . :eyes: don't get killed (/silly) (DO NOT HIDE IN THE BATHROOM)",
 
 	// The hunter submitted a capture photo; it's waiting on admin review.
 	captureSubmittedHunter: () =>
@@ -39,12 +39,12 @@ export const messages = {
 	captureApprovedHunter: (targetName: string, score: number) =>
 		`:tada: Yippee!! ~Kill~ Confirmed - you caught *${targetName}*! *+${score}* points locked in. :trophy: yayy congrats :3`,
 	captureCaughtTarget: (hunterName: string) =>
-		`:o7: You've been caught - *${hunterName}* tracked you down. Open the app for the reveal.`,
+		`:o7: You've been caught, *${hunterName}* tracked you down. [insert sad lose game music here]`,
 
 	// Capture rejected - not the target, or the photo was unclear. The hunt stays
 	// live. `note` is the admin's reason (may be empty).
 	captureRejectedHunter: (note: string) =>
-		`:x: That capture didn't count${
+		`:x: That capture didn't count, :loll: nice tryy!${
 			note ? ` - ${note}` : "."
-		} Your hunt is still live, so keep going. :mag: `,
+		} Your hunt is still live, so keep going. :mag: : `,
 };
