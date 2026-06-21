@@ -12,6 +12,16 @@
 // ───────────────────────────────────────────────────────────────────────────
 
 export const messages = {
+	// A new item entered an admin review queue.
+	adminOnboardingSubmitted: (displayName: string, slackId: string) =>
+		`[ADMIN] :eyes: New onboarding submission from *${displayName}* (<@${slackId}>) is ready to review in pispy.`,
+	adminCaptureSubmitted: (
+		hunterName: string,
+		hunterId: string,
+		targetName: string,
+	) =>
+		`[ADMIN] :camera_with_flash: New capture from *${hunterName}* (<@${hunterId}>) claiming *${targetName}* is ready to review in pispy.`,
+
 	// Onboarding approved - they're now in the game, waiting on an assignment.
 	onboardingApproved: () =>
 		":white_check_mark: Signup/Onboarding complete + Approved! you have successfully handed your data to palantir, ty :earthquakeyeyes:",

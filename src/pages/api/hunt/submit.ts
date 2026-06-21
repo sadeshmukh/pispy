@@ -2,7 +2,10 @@ import type { APIRoute } from "astro";
 import { getSession } from "../../../lib/auth";
 import { db } from "../../../lib/db";
 import { computeScore, getAssignmentForHunter } from "../../../lib/hunt";
-import { notifyCaptureSubmitted } from "../../../lib/notify";
+import {
+	notifyAdminsCaptureSubmitted,
+	notifyCaptureSubmitted,
+} from "../../../lib/notify";
 import { parsePhoto } from "../../../lib/photos";
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -58,7 +61,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 		args: [Math.floor(Date.now() / 1000), score, blob, mime, assignment.id],
 	});
 
-	await notifyCaptureSubmitted(session.slack_id);
+	await Promise.all([
+		notifyCaptureSubmitted(session.slack_id),
+		notifyAdminsCaptureSubmitted(session.slack_id, assignment.target_id),
+	]);
 
 	return redirect("/hunt");
 };

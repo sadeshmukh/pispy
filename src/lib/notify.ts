@@ -19,6 +19,17 @@ async function dm(slackId: string, text: string): Promise<void> {
 	}
 }
 
+function adminIds(): string[] {
+	return (import.meta.env.ADMIN_USERS ?? "")
+		.split(",")
+		.map((id: string) => id.trim())
+		.filter(Boolean);
+}
+
+async function dmAdmins(text: string): Promise<void> {
+	await Promise.all(adminIds().map((adminId) => dm(adminId, text)));
+}
+
 async function displayName(slackId: string): Promise<string> {
 	const { rows } = await db.execute({
 		sql: "SELECT display_name FROM users WHERE slack_id = ?",
@@ -29,6 +40,13 @@ async function displayName(slackId: string): Promise<string> {
 
 export async function notifyOnboardingApproved(slackId: string): Promise<void> {
 	await dm(slackId, messages.onboardingApproved());
+}
+
+export async function notifyAdminsOnboardingSubmitted(
+	slackId: string,
+): Promise<void> {
+	const name = await displayName(slackId);
+	await dmAdmins(messages.adminOnboardingSubmitted(name, slackId));
 }
 
 export async function notifyChangesRequested(
@@ -53,6 +71,19 @@ export async function notifyHuntStarted(
 
 export async function notifyCaptureSubmitted(hunterId: string): Promise<void> {
 	await dm(hunterId, messages.captureSubmittedHunter());
+}
+
+export async function notifyAdminsCaptureSubmitted(
+	hunterId: string,
+	targetId: string,
+): Promise<void> {
+	const [hunterName, targetName] = await Promise.all([
+		displayName(hunterId),
+		displayName(targetId),
+	]);
+	await dmAdmins(
+		messages.adminCaptureSubmitted(hunterName, hunterId, targetName),
+	);
 }
 
 export async function notifyCaptureApproved(

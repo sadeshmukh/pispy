@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { regenerateAiClues } from "../../lib/ai";
 import { getSession } from "../../lib/auth";
 import { db } from "../../lib/db";
+import { notifyAdminsOnboardingSubmitted } from "../../lib/notify";
 import { parsePhoto } from "../../lib/photos";
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
@@ -146,6 +147,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 		aboutText,
 		session.display_name,
 	);
+	await notifyAdminsOnboardingSubmitted(session.slack_id);
 
 	return redirect("/");
 };
