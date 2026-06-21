@@ -59,7 +59,7 @@ export const messages = {
 	// Capture rejected - not the target, or the photo was unclear. The hunt stays
 	// live. `note` is the admin's reason (may be empty).
 	captureRejectedHunter: (note: string) =>
-		`:x: That capture didn't count, :loll: nice tryy!${
-			note ? ` - ${note}` : "."
+		`:x: That capture didn't count, :loll: nice tryy! \n${
+			note ? `>  ${note}` : "."
 		} Your hunt is still live, so keep going. :mag: : `,
 };
