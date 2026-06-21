@@ -68,13 +68,7 @@ if (session) {
     <title>pispy</title>
   </head>
   <body class="h-full w-full bg-[#111] font-sans text-base text-[#ccc]">
-    <a
-      href="https://horizons.nexus/32"
-      class="fixed top-4 right-4 hover:text-white"
-    >
-      VOTE FOR US
-    </a>
-    <main class="flex h-screen w-full items-center justify-center">
+    <main class="flex h-screen w-full flex-col items-center justify-center gap-[1.2rem]">
       {!session ? (
         <a href="/api/auth/login" class="hover:text-white">Sign in</a>
       ) : status === 'pending_review' ? (
@@ -122,6 +116,14 @@ if (session) {
           )}          <a href="/api/auth/logout" class="hover:text-white">Log out</a>
         </div>
       )}
+      <a
+        href="https://horizons.nexus/32"
+        title="vote for this project"
+        target="_blank"
+        class="rounded border border-orange-500/60 bg-orange-500/10 px-3 py-2 text-sm font-bold uppercase tracking-[0.08em] text-orange-400 transition-colors hover:border-orange-400 hover:bg-orange-500/20 hover:text-orange-300"
+      >
+        vote for this project
+      </a>
     </main>
   </body>
 </html>
