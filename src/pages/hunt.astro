@@ -101,8 +101,9 @@ if (assignment?.status === "active" && assignment.started_at) {
             <header class="mb-8">
               <h1 class="mb-2 text-[1.2rem] font-semibold text-[#ddd]">Your target</h1>
               <p class="text-[0.9rem] leading-[1.5] text-[#888]">
-                Here's everything we know about them. Find them fast - your score
-                only drops with time.
+                Here's everything we know about them. Find them fast. <br>
+                score goes down if you take too long :(
+                enjoy the clues!
               </p>
             </header>
 
@@ -114,7 +115,7 @@ if (assignment?.status === "active" && assignment.started_at) {
             )}
 
             {clues.length === 0 ? (
-              <p class="text-[0.9rem] text-[#666]">No clues available for this target.</p>
+              <p class="text-[0.9rem] text-[#666]">No clues available for this target. (this might have been a terrible glitch)</p>
             ) : (
               <div class="flex flex-col">
                 {clues.map((c, i) => (
