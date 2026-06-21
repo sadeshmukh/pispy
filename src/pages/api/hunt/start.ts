@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { db } from "../../../lib/db";
 import { getSession } from "../../../lib/auth";
+import { db } from "../../../lib/db";
 import { getAssignmentForHunter, startAssignment } from "../../../lib/hunt";
 
 export const POST: APIRoute = async ({ cookies, redirect }) => {

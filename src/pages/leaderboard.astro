@@ -1,10 +1,12 @@
 ---
 import "../styles/global.css";
-import { getSession } from "../lib/auth";
+import { getSession, isAdmin } from "../lib/auth";
 import { db } from "../lib/db";
 
 const session = getSession(Astro.cookies);
 if (!session) return Astro.redirect("/");
+
+const showAdminLink = isAdmin(session.slack_id);
 
 // Points per hunter: the sum of every confirmed find's score. Hunters with no
 // confirmed find yet show up with zero so everyone can see the board.
@@ -36,6 +38,9 @@ const { rows } = await db.execute(`
       <nav class="mb-10 flex gap-6 border-b border-[#1e1e1e] pb-4 text-[0.85rem]">
         <a href="/" class="text-[#888] no-underline hover:text-[#ccc]">home</a>
         <a href="/hunt" class="text-[#888] no-underline hover:text-[#ccc]">hunt</a>
+        {showAdminLink && (
+          <a href="/admin" class="text-[#888] no-underline hover:text-[#ccc]">admin</a>
+        )}
         <a href="/api/auth/logout" class="ml-auto text-[#888] no-underline hover:text-[#ccc]">log out</a>
       </nav>
 

@@ -1,8 +1,8 @@
 import type { APIRoute } from "astro";
-import { db } from "../../lib/db";
-import { getSession } from "../../lib/auth";
-import { parsePhoto } from "../../lib/photos";
 import { regenerateAiClues } from "../../lib/ai";
+import { getSession } from "../../lib/auth";
+import { db } from "../../lib/db";
+import { parsePhoto } from "../../lib/photos";
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 	const session = getSession(cookies);

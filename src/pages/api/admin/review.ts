@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { db } from "../../../lib/db";
 import { regenerateAiClues } from "../../../lib/ai";
+import { db } from "../../../lib/db";
 import {
 	notifyChangesRequested,
 	notifyOnboardingApproved,

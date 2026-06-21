@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { db } from "../../../lib/db";
 import { getSession, isAdmin } from "../../../lib/auth";
+import { db } from "../../../lib/db";
 
 // Serves the photo a hunter submitted as proof they found their target.
 // Viewable by an admin or by the hunter who submitted it.

@@ -1,15 +1,17 @@
 ---
 import "../styles/global.css";
-import { getSession } from "../lib/auth";
+import { getSession, isAdmin } from "../lib/auth";
 import { db } from "../lib/db";
 import {
+	computeScore,
 	getAssignmentForHunter,
 	getTargetClues,
-	computeScore,
 } from "../lib/hunt";
 
 const session = getSession(Astro.cookies);
 if (!session) return Astro.redirect("/");
+
+const showAdminLink = isAdmin(session.slack_id);
 
 const { rows } = await db.execute({
 	sql: "SELECT onboarding_status FROM users WHERE slack_id = ?",
@@ -46,6 +48,9 @@ if (assignment?.status === "active" && assignment.started_at) {
       <nav class="mb-12 flex gap-6 border-b border-[#1e1e1e] pb-4 text-[0.85rem]">
         <a href="/" class="text-[#888] no-underline hover:text-[#ccc]">home</a>
         <a href="/leaderboard" class="text-[#888] no-underline hover:text-[#ccc]">leaderboard</a>
+        {showAdminLink && (
+          <a href="/admin" class="text-[#888] no-underline hover:text-[#ccc]">admin</a>
+        )}
         <a href="/api/auth/logout" class="ml-auto text-[#888] no-underline hover:text-[#ccc]">log out</a>
       </nav>
 

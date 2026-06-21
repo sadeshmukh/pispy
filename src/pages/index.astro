@@ -1,11 +1,12 @@
 ---
 import "../styles/global.css";
-import { getSession } from "../lib/auth";
+import { getSession, isAdmin } from "../lib/auth";
 import { db } from "../lib/db";
 
 const session = getSession(Astro.cookies);
 
 let status: string | null = null;
+let showAdminLink = false;
 if (session) {
 	const { rows } = await db.execute({
 		sql: "SELECT onboarding_status FROM users WHERE slack_id = ?",
@@ -16,6 +17,8 @@ if (session) {
 	if (status === "pending_submission" || status === "changes_requested") {
 		return Astro.redirect("/onboard");
 	}
+
+	showAdminLink = isAdmin(session.slack_id);
 }
 ---
 
@@ -34,6 +37,9 @@ if (session) {
       ) : status === 'pending_review' ? (
         <div class="flex flex-col items-center gap-[1.2rem]">
           <p>Your account is pending review.(no fraudsters)</p>
+          {showAdminLink && (
+            <a href="/admin" class="hover:text-white">Admin</a>
+          )}
           <a href="/api/auth/logout" class="hover:text-white">Log out</a>
         </div>
       ) : (
@@ -41,6 +47,9 @@ if (session) {
           <p>{session.display_name}</p>
           <a href="/hunt" class="hover:text-white">Hunt</a>
           <a href="/leaderboard" class="hover:text-white">Leaderboard</a>
+          {showAdminLink && (
+            <a href="/admin" class="hover:text-white">Admin</a>
+          )}
           <a href="/api/auth/logout" class="hover:text-white">Log out</a>
         </div>
       )}

@@ -1,6 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
-import { DB_SCHEMA_VERSION, initDb } from "./lib/db";
 import { getSession, isAdmin } from "./lib/auth";
+import { DB_SCHEMA_VERSION, initDb } from "./lib/db";
 
 let initializedSchemaVersion = 0;
 

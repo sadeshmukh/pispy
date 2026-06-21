@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { db } from "../../../../lib/db";
 import { getSession, isAdmin } from "../../../../lib/auth";
+import { db } from "../../../../lib/db";
 
 export const GET: APIRoute = async ({ params, cookies }) => {
 	const session = getSession(cookies);
