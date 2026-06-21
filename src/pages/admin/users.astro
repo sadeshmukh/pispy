@@ -1,23 +1,23 @@
 ---
-import '../../styles/global.css';
-import { db } from '../../lib/db';
+import "../../styles/global.css";
+import { db } from "../../lib/db";
 
 const { rows: users } = await db.execute(
-  'SELECT slack_id, display_name, onboarding_status, created_at FROM users ORDER BY created_at DESC'
+	"SELECT slack_id, display_name, onboarding_status, created_at FROM users ORDER BY created_at DESC",
 );
 
 const statusLabel: Record<string, string> = {
-  pending_submission: 'not submitted',
-  pending_review: 'pending',
-  approved: 'approved',
-  changes_requested: 'changes requested',
+	pending_submission: "not submitted",
+	pending_review: "pending",
+	approved: "approved",
+	changes_requested: "changes requested",
 };
 
 const statusClass: Record<string, string> = {
-  approved: 'text-[#5a7a5a]',
-  pending_review: 'text-[#7a7a4a]',
-  changes_requested: 'text-[#7a4a4a]',
-  pending_submission: 'text-[#555]',
+	approved: "text-[#5a7a5a]",
+	pending_review: "text-[#7a7a4a]",
+	changes_requested: "text-[#7a4a4a]",
+	pending_submission: "text-[#555]",
 };
 ---
 

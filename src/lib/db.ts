@@ -1,16 +1,16 @@
-import { createClient } from '@libsql/client';
+import { createClient } from "@libsql/client";
 
 // Bump this whenever initDb gains a migration. Middleware uses it to rerun
 // initialization after a hot reload instead of keeping a stale "ready" flag.
 export const DB_SCHEMA_VERSION = 4;
 
 export const db = createClient({
-  url: import.meta.env.TURSO_URL,
-  authToken: import.meta.env.TURSO_AUTH_TOKEN,
+	url: import.meta.env.TURSO_URL,
+	authToken: import.meta.env.TURSO_AUTH_TOKEN,
 });
 
 export async function initDb() {
-  await db.executeMultiple(`
+	await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS users (
       slack_id TEXT PRIMARY KEY,
       display_name TEXT NOT NULL,
@@ -68,30 +68,33 @@ export async function initDb() {
     );
   `);
 
-  // Idempotent migrations for databases created before the capture/score
-  // columns existed. ALTER TABLE ADD COLUMN throws if the column is already
-  // there, so each one is guarded individually.
-  const migrations = [
-    `ALTER TABLE assignments ADD COLUMN submitted_at INTEGER`,
-    `ALTER TABLE assignments ADD COLUMN score INTEGER`,
-    `ALTER TABLE assignments ADD COLUMN submission_photo BLOB`,
-    `ALTER TABLE assignments ADD COLUMN submission_photo_mime TEXT`,
-    `ALTER TABLE assignments ADD COLUMN review_note TEXT`,
-    `ALTER TABLE clue_fields ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'medium'`,
-    `ALTER TABLE clue_fields ADD COLUMN question_type TEXT NOT NULL DEFAULT 'text'`,
-    `ALTER TABLE clue_fields ADD COLUMN placeholder TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE users ADD COLUMN about_text TEXT`,
-    `ALTER TABLE custom_clues ADD COLUMN source TEXT NOT NULL DEFAULT 'user'`,
-  ];
-  for (const sql of migrations) {
-    try {
-      await db.execute(sql);
-    } catch (error) {
-      // Ignore only the expected idempotency failure. A real migration error
-      // must surface here instead of becoming a later "no such column" error.
-      if (!(error instanceof Error) || !error.message.includes('duplicate column name')) {
-        throw error;
-      }
-    }
-  }
+	// Idempotent migrations for databases created before the capture/score
+	// columns existed. ALTER TABLE ADD COLUMN throws if the column is already
+	// there, so each one is guarded individually.
+	const migrations = [
+		`ALTER TABLE assignments ADD COLUMN submitted_at INTEGER`,
+		`ALTER TABLE assignments ADD COLUMN score INTEGER`,
+		`ALTER TABLE assignments ADD COLUMN submission_photo BLOB`,
+		`ALTER TABLE assignments ADD COLUMN submission_photo_mime TEXT`,
+		`ALTER TABLE assignments ADD COLUMN review_note TEXT`,
+		`ALTER TABLE clue_fields ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'medium'`,
+		`ALTER TABLE clue_fields ADD COLUMN question_type TEXT NOT NULL DEFAULT 'text'`,
+		`ALTER TABLE clue_fields ADD COLUMN placeholder TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE users ADD COLUMN about_text TEXT`,
+		`ALTER TABLE custom_clues ADD COLUMN source TEXT NOT NULL DEFAULT 'user'`,
+	];
+	for (const sql of migrations) {
+		try {
+			await db.execute(sql);
+		} catch (error) {
+			// Ignore only the expected idempotency failure. A real migration error
+			// must surface here instead of becoming a later "no such column" error.
+			if (
+				!(error instanceof Error) ||
+				!error.message.includes("duplicate column name")
+			) {
+				throw error;
+			}
+		}
+	}
 }

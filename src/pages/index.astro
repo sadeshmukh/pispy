@@ -1,21 +1,21 @@
 ---
-import '../styles/global.css';
-import { getSession } from '../lib/auth';
-import { db } from '../lib/db';
+import "../styles/global.css";
+import { getSession } from "../lib/auth";
+import { db } from "../lib/db";
 
 const session = getSession(Astro.cookies);
 
 let status: string | null = null;
 if (session) {
-  const { rows } = await db.execute({
-    sql: 'SELECT onboarding_status FROM users WHERE slack_id = ?',
-    args: [session.slack_id],
-  });
-  status = rows[0]?.onboarding_status as string ?? null;
+	const { rows } = await db.execute({
+		sql: "SELECT onboarding_status FROM users WHERE slack_id = ?",
+		args: [session.slack_id],
+	});
+	status = (rows[0]?.onboarding_status as string) ?? null;
 
-  if (status === 'pending_submission' || status === 'changes_requested') {
-    return Astro.redirect('/onboard');
-  }
+	if (status === "pending_submission" || status === "changes_requested") {
+		return Astro.redirect("/onboard");
+	}
 }
 ---
 

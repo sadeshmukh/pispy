@@ -1,32 +1,37 @@
 ---
-import '../../../styles/global.css';
-import { db } from '../../../lib/db';
+import "../../../styles/global.css";
+import { db } from "../../../lib/db";
 
 const { slack_id } = Astro.params;
 
 const { rows } = await db.execute({
-  sql: 'SELECT display_name, avatar_url, onboarding_status, review_note FROM users WHERE slack_id = ?',
-  args: [slack_id!],
+	sql: "SELECT display_name, avatar_url, onboarding_status, review_note FROM users WHERE slack_id = ?",
+	args: [slack_id!],
 });
-if (!rows[0]) return Astro.redirect('/admin/users');
+if (!rows[0]) return Astro.redirect("/admin/users");
 const user = rows[0];
 
 // Every clue field, with the user's answer (if any) so admins can edit them all.
 const { rows: fields } = await db.execute({
-  sql: `SELECT cf.id, cf.prompt, uc.answer
+	sql: `SELECT cf.id, cf.prompt, uc.answer
         FROM clue_fields cf
         LEFT JOIN user_clues uc ON uc.field_id = cf.id AND uc.slack_id = ?
         ORDER BY cf.field_order, cf.id`,
-  args: [slack_id!],
+	args: [slack_id!],
 });
 const { rows: customClues } = await db.execute({
-  sql: "SELECT id, clue, difficulty, source FROM custom_clues WHERE slack_id = ? ORDER BY source DESC, id",
-  args: [slack_id!],
+	sql: "SELECT id, clue, difficulty, source FROM custom_clues WHERE slack_id = ? ORDER BY source DESC, id",
+	args: [slack_id!],
 });
 
 // Cache-bust the photo URLs so a fresh upload shows immediately.
 const cb = Date.now();
-const statuses = ['pending_submission', 'pending_review', 'approved', 'changes_requested'];
+const statuses = [
+	"pending_submission",
+	"pending_review",
+	"approved",
+	"changes_requested",
+];
 const currentStatus = user.onboarding_status as string;
 ---
 

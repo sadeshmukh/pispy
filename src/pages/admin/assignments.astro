@@ -1,9 +1,9 @@
 ---
-import '../../styles/global.css';
-import { db } from '../../lib/db';
+import "../../styles/global.css";
+import { db } from "../../lib/db";
 
 const { rows: approved } = await db.execute(
-  `SELECT slack_id, display_name FROM users WHERE onboarding_status = 'approved' ORDER BY display_name`
+	`SELECT slack_id, display_name FROM users WHERE onboarding_status = 'approved' ORDER BY display_name`,
 );
 
 // Assignments joined with hunter/target names and how many clues the target has.
@@ -21,17 +21,17 @@ const { rows: assignments } = await db.execute(`
 `);
 
 const statusLabel: Record<string, string> = {
-  assigned: 'not started',
-  active: 'hunting',
-  submitted: 'needs review',
-  completed: 'found',
+	assigned: "not started",
+	active: "hunting",
+	submitted: "needs review",
+	completed: "found",
 };
 
 const statusClass: Record<string, string> = {
-  assigned: 'text-[#b3b35a]',
-  active: 'text-[#6a9aba]',
-  submitted: 'text-[#c08a4a]',
-  completed: 'text-[#6a9a6a]',
+	assigned: "text-[#b3b35a]",
+	active: "text-[#6a9aba]",
+	submitted: "text-[#c08a4a]",
+	completed: "text-[#6a9a6a]",
 };
 ---
 

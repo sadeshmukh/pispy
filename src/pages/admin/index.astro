@@ -1,14 +1,16 @@
 ---
-import '../../styles/global.css';
-import { db } from '../../lib/db';
+import "../../styles/global.css";
+import { db } from "../../lib/db";
 
 const { rows: pending } = await db.execute(
-  `SELECT slack_id, display_name, created_at FROM users WHERE onboarding_status = 'pending_review' ORDER BY created_at ASC`
+	`SELECT slack_id, display_name, created_at FROM users WHERE onboarding_status = 'pending_review' ORDER BY created_at ASC`,
 );
 const { rows: all } = await db.execute(
-  `SELECT onboarding_status, COUNT(*) as count FROM users GROUP BY onboarding_status`
+	`SELECT onboarding_status, COUNT(*) as count FROM users GROUP BY onboarding_status`,
 );
-const counts = Object.fromEntries(all.map(r => [r.onboarding_status as string, r.count as number]));
+const counts = Object.fromEntries(
+	all.map((r) => [r.onboarding_status as string, r.count as number]),
+);
 
 // Submitted captures waiting for an admin to confirm the find.
 const { rows: captures } = await db.execute(`

@@ -1,9 +1,9 @@
 ---
-import '../../styles/global.css';
-import { db } from '../../lib/db';
+import "../../styles/global.css";
+import { db } from "../../lib/db";
 
 const { rows: fields } = await db.execute(
-  'SELECT id, prompt, field_order, difficulty, question_type, placeholder FROM clue_fields ORDER BY field_order, id'
+	"SELECT id, prompt, field_order, difficulty, question_type, placeholder FROM clue_fields ORDER BY field_order, id",
 );
 ---
 

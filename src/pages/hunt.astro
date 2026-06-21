@@ -3,21 +3,21 @@ import "../styles/global.css";
 import { getSession } from "../lib/auth";
 import { db } from "../lib/db";
 import {
-  getAssignmentForHunter,
-  getTargetClues,
-  computeScore,
+	getAssignmentForHunter,
+	getTargetClues,
+	computeScore,
 } from "../lib/hunt";
 
 const session = getSession(Astro.cookies);
 if (!session) return Astro.redirect("/");
 
 const { rows } = await db.execute({
-  sql: "SELECT onboarding_status FROM users WHERE slack_id = ?",
-  args: [session.slack_id],
+	sql: "SELECT onboarding_status FROM users WHERE slack_id = ?",
+	args: [session.slack_id],
 });
 const status = rows[0]?.onboarding_status as string | undefined;
 if (status === "pending_submission" || status === "changes_requested") {
-  return Astro.redirect("/onboard");
+	return Astro.redirect("/onboard");
 }
 if (status !== "approved") return Astro.redirect("/");
 
@@ -28,8 +28,8 @@ const clues = assignment ? await getTargetClues(assignment.target_id) : [];
 // What a find would be worth if submitted right now — drops purely with time.
 let potentialScore: number | null = null;
 if (assignment?.status === "active" && assignment.started_at) {
-  const elapsed = Math.floor(Date.now() / 1000) - assignment.started_at;
-  potentialScore = computeScore(elapsed);
+	const elapsed = Math.floor(Date.now() / 1000) - assignment.started_at;
+	potentialScore = computeScore(elapsed);
 }
 ---
 

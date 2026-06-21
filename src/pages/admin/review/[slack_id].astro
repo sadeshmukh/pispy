@@ -1,32 +1,32 @@
 ---
-import '../../../styles/global.css';
-import { db } from '../../../lib/db';
+import "../../../styles/global.css";
+import { db } from "../../../lib/db";
 
 const { slack_id } = Astro.params;
 
 const { rows } = await db.execute({
-  sql: 'SELECT display_name, avatar_url, onboarding_status, about_text FROM users WHERE slack_id = ?',
-  args: [slack_id!],
+	sql: "SELECT display_name, avatar_url, onboarding_status, about_text FROM users WHERE slack_id = ?",
+	args: [slack_id!],
 });
-if (!rows[0]) return Astro.redirect('/admin');
+if (!rows[0]) return Astro.redirect("/admin");
 
 const user = rows[0];
 const aboutText = (user.about_text as string | null)?.trim();
 
 const { rows: clues } = await db.execute({
-  sql: `SELECT cf.prompt, uc.answer, cf.difficulty, cf.question_type
+	sql: `SELECT cf.prompt, uc.answer, cf.difficulty, cf.question_type
         FROM user_clues uc
         JOIN clue_fields cf ON cf.id = uc.field_id
         WHERE uc.slack_id = ?
         ORDER BY cf.field_order, cf.id`,
-  args: [slack_id!],
+	args: [slack_id!],
 });
 const { rows: customClues } = await db.execute({
-  sql: 'SELECT id, clue, difficulty, source FROM custom_clues WHERE slack_id = ? ORDER BY source DESC, id',
-  args: [slack_id!],
+	sql: "SELECT id, clue, difficulty, source FROM custom_clues WHERE slack_id = ? ORDER BY source DESC, id",
+	args: [slack_id!],
 });
-const aiClues = customClues.filter(c => c.source === 'ai');
-const userClues = customClues.filter(c => c.source !== 'ai');
+const aiClues = customClues.filter((c) => c.source === "ai");
+const userClues = customClues.filter((c) => c.source !== "ai");
 ---
 
 <!doctype html>

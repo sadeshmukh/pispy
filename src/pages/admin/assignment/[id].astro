@@ -1,20 +1,17 @@
 ---
-import '../../../styles/global.css';
-import { db } from '../../../lib/db';
-import {
-  getAssignment,
-  getTargetClues,
-} from '../../../lib/hunt';
+import "../../../styles/global.css";
+import { db } from "../../../lib/db";
+import { getAssignment, getTargetClues } from "../../../lib/hunt";
 
 const id = parseInt(Astro.params.id!);
 const assignment = id ? await getAssignment(id) : null;
-if (!assignment) return Astro.redirect('/admin/assignments');
+if (!assignment) return Astro.redirect("/admin/assignments");
 
 const { rows: names } = await db.execute({
-  sql: `SELECT
+	sql: `SELECT
           (SELECT display_name FROM users WHERE slack_id = ?) AS hunter_name,
           (SELECT display_name FROM users WHERE slack_id = ?) AS target_name`,
-  args: [assignment.hunter_id, assignment.target_id],
+	args: [assignment.hunter_id, assignment.target_id],
 });
 const hunterName = names[0]?.hunter_name as string;
 const targetName = names[0]?.target_name as string;
@@ -22,18 +19,18 @@ const targetName = names[0]?.target_name as string;
 const clues = await getTargetClues(assignment.target_id);
 
 const startedLabel = assignment.started_at
-  ? new Date(assignment.started_at * 1000).toLocaleString()
-  : null;
+	? new Date(assignment.started_at * 1000).toLocaleString()
+	: null;
 const submittedLabel = assignment.submitted_at
-  ? new Date(assignment.submitted_at * 1000).toLocaleString()
-  : null;
+	? new Date(assignment.submitted_at * 1000).toLocaleString()
+	: null;
 const cb = Date.now();
 
 const statusClass: Record<string, string> = {
-  assigned: 'text-[#b3b35a]',
-  active: 'text-[#6a9aba]',
-  submitted: 'text-[#c08a4a]',
-  completed: 'text-[#6a9a6a]',
+	assigned: "text-[#b3b35a]",
+	active: "text-[#6a9aba]",
+	submitted: "text-[#c08a4a]",
+	completed: "text-[#6a9a6a]",
 };
 ---
 

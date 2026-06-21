@@ -1,10 +1,10 @@
 ---
-import '../styles/global.css';
-import { getSession } from '../lib/auth';
-import { db } from '../lib/db';
+import "../styles/global.css";
+import { getSession } from "../lib/auth";
+import { db } from "../lib/db";
 
 const session = getSession(Astro.cookies);
-if (!session) return Astro.redirect('/');
+if (!session) return Astro.redirect("/");
 
 // Points per hunter: the sum of every confirmed find's score. Hunters with no
 // confirmed find yet show up with zero so everyone can see the board.
