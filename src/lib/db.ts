@@ -2,7 +2,7 @@ import { createClient } from '@libsql/client';
 
 // Bump this whenever initDb gains a migration. Middleware uses it to rerun
 // initialization after a hot reload instead of keeping a stale "ready" flag.
-export const DB_SCHEMA_VERSION = 2;
+export const DB_SCHEMA_VERSION = 3;
 
 export const db = createClient({
   url: import.meta.env.TURSO_URL,
@@ -29,6 +29,7 @@ export async function initDb() {
       field_order INTEGER NOT NULL DEFAULT 0,
       difficulty TEXT NOT NULL DEFAULT 'medium',
       question_type TEXT NOT NULL DEFAULT 'text',
+      placeholder TEXT NOT NULL DEFAULT '',
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
     CREATE TABLE IF NOT EXISTS user_clues (
@@ -76,12 +77,17 @@ export async function initDb() {
     `ALTER TABLE assignments ADD COLUMN review_note TEXT`,
     `ALTER TABLE clue_fields ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'medium'`,
     `ALTER TABLE clue_fields ADD COLUMN question_type TEXT NOT NULL DEFAULT 'text'`,
+    `ALTER TABLE clue_fields ADD COLUMN placeholder TEXT NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) {
     try {
       await db.execute(sql);
-    } catch {
-      // column already exists — nothing to do
+    } catch (error) {
+      // Ignore only the expected idempotency failure. A real migration error
+      // must surface here instead of becoming a later "no such column" error.
+      if (!(error instanceof Error) || !error.message.includes('duplicate column name')) {
+        throw error;
+      }
     }
   }
 }

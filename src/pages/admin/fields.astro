@@ -3,7 +3,7 @@ import '../../styles/global.css';
 import { db } from '../../lib/db';
 
 const { rows: fields } = await db.execute(
-  'SELECT id, prompt, field_order, difficulty, question_type FROM clue_fields ORDER BY field_order, id'
+  'SELECT id, prompt, field_order, difficulty, question_type, placeholder FROM clue_fields ORDER BY field_order, id'
 );
 ---
 
@@ -41,7 +41,10 @@ const { rows: fields } = await db.execute(
                   <form action="/api/admin/fields" method="POST" class="flex items-center gap-2">
                     <input type="hidden" name="action" value="update" />
                     <input type="hidden" name="id" value={f.id as number} />
-                    <input type="text" name="prompt" value={f.prompt as string} class="flex-1 border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+                    <div class="grid min-w-0 flex-1 gap-1.5">
+                      <input type="text" name="prompt" value={f.prompt as string} aria-label="question" class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+                      <input type="text" name="placeholder" value={f.placeholder as string} placeholder="textbox placeholder (optional)" aria-label="textbox placeholder" class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+                    </div>
                     <select name="difficulty" aria-label="difficulty" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none">
                       {['hard', 'medium', 'easy'].map(level => <option value={level} selected={f.difficulty === level}>{level}</option>)}
                     </select>
@@ -72,7 +75,10 @@ const { rows: fields } = await db.execute(
         <p class="mb-3 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">add field</p>
         <form action="/api/admin/fields" method="POST" class="flex gap-3">
           <input type="hidden" name="action" value="create" />
-          <input type="text" name="prompt" placeholder="e.g. what do you usually wear?" required class="flex-1 border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+          <div class="grid min-w-0 flex-1 gap-1.5">
+            <input type="text" name="prompt" placeholder="e.g. what do you usually wear?" aria-label="question" required class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+            <input type="text" name="placeholder" placeholder="textbox placeholder (optional)" aria-label="textbox placeholder" class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none focus:border-[#444]" />
+          </div>
           <select name="difficulty" aria-label="difficulty" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none"><option value="hard">hard</option><option value="medium" selected>medium</option><option value="easy">easy</option></select>
           <select name="question_type" aria-label="answer type" class="w-auto flex-none border border-[#2a2a2a] bg-[#161616] px-[0.6rem] py-[0.35rem] font-sans text-[0.85rem] text-[#ccc] outline-none"><option value="text">text</option><option value="yes_no">yes / no</option></select>
           <button type="submit" class="cursor-pointer whitespace-nowrap border border-[#333] bg-none px-4 py-[0.35rem] font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]">add</button>
