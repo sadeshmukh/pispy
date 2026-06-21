@@ -132,6 +132,9 @@ if (assignment?.status === "active" && assignment.started_at) {
                     </span>
                     <div>
                       <span class="clue-prompt">{c.prompt}</span>
+                      <span class={`clue-level level-${c.difficulty}`}>
+                        {c.difficulty}
+                      </span>
                       <span class="clue-answer">{c.answer}</span>
                     </div>
                   </div>
@@ -502,6 +505,16 @@ if (assignment?.status === "active" && assignment.started_at) {
     font-size: 0.75rem;
     color: #888;
     margin-bottom: 0.3rem;
+  }
+  .clue-level {
+    display: inline-block;
+    font-size: 0.62rem;
+    color: #666;
+    border: 1px solid #292929;
+    padding: 0.08rem 0.35rem;
+    margin-bottom: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
   .clue-answer {
     display: block;

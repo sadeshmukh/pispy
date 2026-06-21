@@ -12,7 +12,8 @@ const { rows: assignments } = await db.execute(`
     h.display_name AS hunter_name,
     t.display_name AS target_name,
     (SELECT COUNT(*) FROM clue_releases cr WHERE cr.assignment_id = a.id) AS released,
-    (SELECT COUNT(*) FROM user_clues uc WHERE uc.slack_id = a.target_id) AS total
+    ((SELECT COUNT(*) FROM user_clues uc WHERE uc.slack_id = a.target_id) +
+     (SELECT COUNT(*) FROM custom_clues cc WHERE cc.slack_id = a.target_id)) AS total
   FROM assignments a
   JOIN users h ON h.slack_id = a.hunter_id
   JOIN users t ON t.slack_id = a.target_id

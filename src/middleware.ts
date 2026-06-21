@@ -1,13 +1,13 @@
 import { defineMiddleware } from 'astro:middleware';
-import { initDb } from './lib/db';
+import { DB_SCHEMA_VERSION, initDb } from './lib/db';
 import { getSession, isAdmin } from './lib/auth';
 
-let dbReady = false;
+let initializedSchemaVersion = 0;
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  if (!dbReady) {
+  if (initializedSchemaVersion !== DB_SCHEMA_VERSION) {
     await initDb();
-    dbReady = true;
+    initializedSchemaVersion = DB_SCHEMA_VERSION;
   }
 
   const { pathname } = context.url;
