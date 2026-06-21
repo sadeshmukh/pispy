@@ -55,7 +55,7 @@ const { rows: customClues } = await db.execute({
 
       <header class="mb-10 flex items-center gap-4">
         {session.avatar_url && <img src={session.avatar_url} alt="" class="h-12 w-12 rounded-full object-cover grayscale-[30%]" />}
-        <span class="text-[1.1rem] text-[#ddd]">{session.display_name}</span>
+        <span class="text-[1.1rem] text-[#ddd]">hi {session.display_name}</span>
       </header>
       <section id="consent-gate" class="border border-[#5a4a1a] bg-[#1a170f] p-5">
         <p class="mb-2 text-[0.7rem] text-[#c8ad5a]">Disclaimer</p>
@@ -70,7 +70,7 @@ const { rows: customClues } = await db.execute({
 
       <form id="onboard-form" action="/api/onboard" method="POST" enctype="multipart/form-data" hidden>
         <div class="mb-7">
-          <label class="mb-[0.4rem] block text-[0.7rem] uppercase tracking-[0.12em] text-[#666]">badge photo</label>
+          <label class="mb-[0.4rem] block text-[0.7rem] tracking-[0.12em] uppercase text-[#666]">badge photo</label>
           <p class="mb-3 text-[0.8rem] text-[#555]">a photo of your badge</p>
           <div id="badge-field">
             <div class="mb-[0.6rem] flex aspect-[4/3] w-full items-center justify-center overflow-hidden border border-[#222] bg-[#161616]">
@@ -80,12 +80,12 @@ const { rows: customClues } = await db.execute({
             </div>
             <div class="flex flex-wrap items-center gap-[0.6rem]">
               <label class="cursor-pointer border border-[#333] bg-none px-[0.8rem] py-[0.35rem] font-sans text-[0.8rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]">
-                upload file(... sane img)
+                upload file
                 <input type="file" id="badge-file" accept="image/*" hidden>
               </label>
               <span class="text-[0.75rem] text-[#444]">or</span>
-              <button type="button" class="cursor-pointer border border-[#333] bg-none px-[0.8rem] py-[0.35rem] font-sans text-[0.8rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]" id="badge-camera-open">use device camera</button>
-              <button type="button" class="cursor-pointer border border-[#333] bg-none px-[0.8rem] py-[0.35rem] font-sans text-[0.8rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]" id="badge-snap" hidden>snap(smilee)</button>
+              <button type="button" class="cursor-pointer border border-[#333] bg-none px-[0.8rem] py-[0.35rem] font-sans text-[0.8rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]" id="badge-camera-open">use camera</button>
+              <button type="button" class="cursor-pointer border border-[#333] bg-none px-[0.8rem] py-[0.35rem] font-sans text-[0.8rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]" id="badge-snap" hidden>snap</button>
               <button type="button" class="cursor-pointer border-none bg-none py-[0.35rem] font-sans text-[0.8rem] text-[#555] hover:text-[#888]" id="badge-retake" hidden>retake</button>
             </div>
             <input type="hidden" name="badge_photo_data" id="badge-data" />
