@@ -3,9 +3,12 @@ import "../styles/global.css";
 import { getSession, isAdmin } from "../lib/auth";
 import { db } from "../lib/db";
 import {
+	BASE_SCORE,
 	computeScore,
 	getAssignmentForHunter,
 	getTargetClues,
+	MIN_SCORE,
+	POINTS_LOST_PER_SECOND,
 } from "../lib/hunt";
 
 const session = getSession(Astro.cookies);
@@ -32,6 +35,11 @@ let potentialScore: number | null = null;
 if (assignment?.status === "active" && assignment.started_at) {
 	const elapsed = Math.floor(Date.now() / 1000) - assignment.started_at;
 	potentialScore = computeScore(elapsed);
+}
+
+function formatCountdown(seconds: number): string {
+	const minutes = Math.floor(seconds / 60);
+	return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 ---
 
@@ -119,13 +127,47 @@ if (assignment?.status === "active" && assignment.started_at) {
               </div>
             )}
 
+            {potentialScore !== null && (
+              <section
+                id="hunt-score"
+                data-initial-score={potentialScore}
+                data-base-score={BASE_SCORE}
+                data-min-score={MIN_SCORE}
+                data-points-per-second={POINTS_LOST_PER_SECOND}
+                class="mb-8 border border-[#2a2a2a] bg-[#141414]"
+                aria-label={`Current hunt value: ${potentialScore} points`}
+              >
+                <div class="flex items-center justify-between gap-5 px-5 pt-5 pb-4">
+                  <div>
+                    <div class="flex items-baseline gap-2.5">
+                      <strong id="hunt-score-points" class=" text-[2.25rem] leading-none font-medium tabular-nums text-[#e2e2e2]">{potentialScore}</strong>
+                      <span class="text-[0.68rem] uppercase tracking-[0.1em] text-[#707070]">points</span>
+                    </div>
+                  </div>
+                  <div class="border-l border-[#292929] pl-5 text-right">
+                    <span class="mb-1.5 block text-[0.6rem] uppercase tracking-[0.12em] text-[#666]">time left</span>
+                    <strong id="hunt-score-time" class=" text-[1.15rem] font-normal tabular-nums text-[#aaa]">
+                      {formatCountdown(Math.ceil((potentialScore - MIN_SCORE) / POINTS_LOST_PER_SECOND))}
+                    </strong>
+                  </div>
+                </div>
+                <div class="mx-5 mb-5 h-px bg-[#242424]">
+                  <div
+                    id="hunt-score-bar"
+                    class="h-full bg-[#7896a8] transition-[width] duration-300"
+                    style={`width: ${(potentialScore / BASE_SCORE) * 100}%`}
+                  />
+                </div>
+              </section>
+            )}
+
             {clues.length === 0 ? (
               <p class="text-[0.9rem] text-[#666]">No clues available for this target. (this might have been a terrible glitch)</p>
             ) : (
               <div class="flex flex-col">
                 {clues.map((c, i) => (
                   <div class="flex items-baseline gap-4 border-t border-[#1a1a1a] py-4">
-                    <span class="font-mono text-[0.7rem] text-[#666]">
+                    <span class=" text-[0.7rem] text-[#666]">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <div>
@@ -137,12 +179,6 @@ if (assignment?.status === "active" && assignment.started_at) {
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {potentialScore !== null && (
-              <div class="mt-6 flex justify-end border-t border-[#1e1e1e] pt-4 text-[0.78rem] text-[#888]">
-                <span>worth ~{potentialScore} pts now</span>
               </div>
             )}
 
@@ -234,6 +270,62 @@ if (assignment?.status === "active" && assignment.started_at) {
     </div>
 
     <script>
+      function setupHuntScore() {
+        const panel = document.getElementById("hunt-score");
+        const points = document.getElementById("hunt-score-points");
+        const time = document.getElementById("hunt-score-time");
+        const bar = document.getElementById("hunt-score-bar") as HTMLElement | null;
+        if (!panel || !points || !time || !bar) return;
+        const scorePanel = panel;
+        const pointsElement = points;
+        const timeElement = time;
+        const barElement = bar;
+
+        const initialScore = Number(scorePanel.dataset.initialScore);
+        const baseScore = Number(scorePanel.dataset.baseScore);
+        const minScore = Number(scorePanel.dataset.minScore);
+        const pointsPerSecond = Number(scorePanel.dataset.pointsPerSecond);
+        if (![initialScore, baseScore, minScore, pointsPerSecond].every(Number.isFinite) || pointsPerSecond <= 0) return;
+
+        const started = performance.now();
+        let previousScore = -1;
+        let timer: number | undefined;
+
+        function render() {
+          const elapsed = Math.floor((performance.now() - started) / 1000);
+          const score = Math.max(
+            minScore,
+            initialScore - elapsed * pointsPerSecond,
+          );
+          if (score === previousScore) return;
+          previousScore = score;
+
+          const secondsRemaining = Math.ceil(
+            (score - minScore) / pointsPerSecond,
+          );
+          const minutes = Math.floor(secondsRemaining / 60);
+          pointsElement.textContent = String(score);
+          timeElement.textContent = `${String(minutes).padStart(2, "0")}:${String(secondsRemaining % 60).padStart(2, "0")}`;
+          barElement.style.width = `${Math.max(0, (score / baseScore) * 100)}%`;
+          scorePanel.setAttribute("aria-label", `Current hunt value: ${score} points`);
+
+          if (score === minScore) {
+            scorePanel.classList.remove("border-[#2a2a2a]", "bg-[#141414]");
+            scorePanel.classList.add("border-[#4a3030]", "bg-[#181313]");
+            pointsElement.classList.remove("text-[#e2e2e2]");
+            pointsElement.classList.add("text-[#d49a9a]");
+            if (timer !== undefined) window.clearInterval(timer);
+          }
+        }
+
+        render();
+        if (initialScore === minScore) return;
+        timer = window.setInterval(render, 250);
+        window.addEventListener("pagehide", () => window.clearInterval(timer), {
+          once: true,
+        });
+      }
+
       function setupPhotoField(id: string) {
         const fileInput = document.getElementById(
           `${id}-file`,
@@ -331,6 +423,7 @@ if (assignment?.status === "active" && assignment.started_at) {
         });
       }
 
+      setupHuntScore();
       setupPhotoField("capture");
 
       document.querySelectorAll(".fallback-file").forEach((el) => {

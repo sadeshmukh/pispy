@@ -2,7 +2,7 @@ import { createClient } from "@libsql/client";
 
 // Bump this whenever initDb gains a migration. Middleware uses it to rerun
 // initialization after a hot reload instead of keeping a stale "ready" flag.
-export const DB_SCHEMA_VERSION = 4;
+export const DB_SCHEMA_VERSION = 5;
 
 export const db = createClient({
 	url: import.meta.env.TURSO_URL,
@@ -65,6 +65,12 @@ export async function initDb() {
       difficulty TEXT NOT NULL DEFAULT 'medium',
       source TEXT NOT NULL DEFAULT 'user',
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE IF NOT EXISTS hunt_threshold_notifications (
+      assignment_id INTEGER NOT NULL,
+      threshold INTEGER NOT NULL,
+      sent_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (assignment_id, threshold)
     );
   `);
 

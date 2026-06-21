@@ -1,6 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import { getSession, isAdmin } from "./lib/auth";
 import { DB_SCHEMA_VERSION, initDb } from "./lib/db";
+import { startHuntReminderWorker } from "./lib/hunt-reminders";
 
 let initializedSchemaVersion = 0;
 
@@ -66,6 +67,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		await initDb();
 		initializedSchemaVersion = DB_SCHEMA_VERSION;
 	}
+	startHuntReminderWorker();
 
 	const { pathname } = context.url;
 

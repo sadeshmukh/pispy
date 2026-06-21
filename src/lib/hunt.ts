@@ -5,8 +5,9 @@ import { notifyHuntStarted } from "./notify";
 // took. All clues are shown up front, so speed is the whole game - find your
 // target fastest to win.
 export const BASE_SCORE = 1000;
-export const TIME_PENALTY_PER_HOUR = 50; // points lost per hour since the hunt started
-export const MIN_SCORE = 100; // a successful find always earns at least this
+export const POINTS_LOST_PER_SECOND = 1;
+export const MIN_SCORE = 0;
+export const SCORE_REMINDER_THRESHOLDS = [500, 250, 100] as const;
 
 export type Assignment = {
 	id: number;
@@ -114,9 +115,8 @@ export async function getTargetClues(target_id: string): Promise<Clue[]> {
 // The score a find would earn right now given how long the hunt has been
 // running. All clues are visible from the start, so only elapsed time matters.
 export function computeScore(elapsedSeconds: number): number {
-	const timePenalty = Math.floor(
-		(Math.max(0, elapsedSeconds) / 3600) * TIME_PENALTY_PER_HOUR,
-	);
+	const timePenalty =
+		Math.floor(Math.max(0, elapsedSeconds)) * POINTS_LOST_PER_SECOND;
 	return Math.max(MIN_SCORE, BASE_SCORE - timePenalty);
 }
 
@@ -144,6 +144,10 @@ export async function startAssignment(assignmentId: number): Promise<boolean> {
 	// Only DM when this call actually started the hunt, so repeated start clicks
 	// or an admin force-start don't spam both players.
 	if (res.rowsAffected > 0) {
+		await db.execute({
+			sql: "DELETE FROM hunt_threshold_notifications WHERE assignment_id = ?",
+			args: [assignmentId],
+		});
 		await notifyHuntStarted(hunter, target);
 	}
 	return res.rowsAffected > 0;
