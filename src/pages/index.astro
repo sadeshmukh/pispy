@@ -38,7 +38,8 @@ if (session) {
         </div>
       ) : (
         <div class="flex flex-col items-center gap-[1.2rem]">
-          <p>{session.display_name}</p>
+          <p class="font-bold text-lg">hi {session.display_name}!</p>
+          <hr class="border-stone-300 w-full border-dotted" />
           <a href="/hunt" class="hover:text-white">Hunt</a>
           <a href="/leaderboard" class="hover:text-white">Leaderboard</a>
           <a href="/api/auth/logout" class="hover:text-white">Log out</a>
