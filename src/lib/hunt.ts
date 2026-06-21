@@ -22,7 +22,7 @@ export type Assignment = {
 };
 
 export type Clue = {
-	id: number; // standard field id, or negative custom_clues id
+	id: number; // standard field id, negative custom_clues id, or 0 for the auto name clue
 	prompt: string;
 	answer: string;
 	difficulty: "hard" | "medium" | "easy";
@@ -70,22 +70,40 @@ export async function getAssignmentForHunter(
 // The target's clues (standard answers + custom/AI), ordered by difficulty.
 // All of these are shown to the hunter at once.
 export async function getTargetClues(target_id: string): Promise<Clue[]> {
-	const [{ rows: standard }, { rows: custom }] = await Promise.all([
-		db.execute({
-			sql: `SELECT cf.id, cf.prompt, uc.answer, cf.difficulty, cf.field_order
+	const [{ rows: standard }, { rows: custom }, { rows: users }] =
+		await Promise.all([
+			db.execute({
+				sql: `SELECT cf.id, cf.prompt, uc.answer, cf.difficulty, cf.field_order
           FROM user_clues uc
           JOIN clue_fields cf ON cf.id = uc.field_id
           WHERE uc.slack_id = ?
           ORDER BY cf.field_order, cf.id`,
-			args: [target_id],
-		}),
-		db.execute({
-			sql: "SELECT id, clue, difficulty FROM custom_clues WHERE slack_id = ? ORDER BY id",
-			args: [target_id],
-		}),
-	]);
+				args: [target_id],
+			}),
+			db.execute({
+				sql: "SELECT id, clue, difficulty FROM custom_clues WHERE slack_id = ? ORDER BY id",
+				args: [target_id],
+			}),
+			db.execute({
+				sql: "SELECT display_name FROM users WHERE slack_id = ?",
+				args: [target_id],
+			}),
+		]);
 	const rank: Record<string, number> = { hard: 0, medium: 1, easy: 2 };
+	const nameClue = users[0]
+		? [
+				{
+					id: 0,
+					prompt: "Name",
+					answer: users[0].display_name as string,
+					difficulty: "easy" as Clue["difficulty"],
+					custom: false,
+					order: -1,
+				},
+			]
+		: [];
 	return [
+		...nameClue,
 		...standard.map((r) => ({
 			id: r.id as number,
 			prompt: r.prompt as string,
