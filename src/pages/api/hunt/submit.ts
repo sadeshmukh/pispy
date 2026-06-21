@@ -3,6 +3,7 @@ import { db } from "../../../lib/db";
 import { getSession } from "../../../lib/auth";
 import { parsePhoto } from "../../../lib/photos";
 import { getAssignmentForHunter, computeScore } from "../../../lib/hunt";
+import { notifyCaptureSubmitted } from "../../../lib/notify";
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 	const session = getSession(cookies);
@@ -56,6 +57,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
           WHERE id = ?`,
 		args: [Math.floor(Date.now() / 1000), score, blob, mime, assignment.id],
 	});
+
+	await notifyCaptureSubmitted(session.slack_id);
 
 	return redirect("/hunt");
 };

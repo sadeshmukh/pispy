@@ -1,6 +1,10 @@
 import type { APIRoute } from "astro";
 import { db } from "../../../lib/db";
 import { getAssignment, startAssignment } from "../../../lib/hunt";
+import {
+	notifyCaptureApproved,
+	notifyCaptureRejected,
+} from "../../../lib/notify";
 
 export const POST: APIRoute = async ({ request, redirect }) => {
 	const formData = await request.formData();
@@ -61,7 +65,11 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 				sql: `UPDATE assignments SET status = 'completed', review_note = NULL WHERE id = ?`,
 				args: [id],
 			});
-			// TODO(slack): notify the hunter their find was confirmed and points awarded.
+			await notifyCaptureApproved(
+				assignment.hunter_id,
+				assignment.target_id,
+				assignment.score ?? 0,
+			);
 		}
 		return redirect(detail);
 	}
@@ -82,7 +90,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
               WHERE id = ?`,
 				args: [note, id],
 			});
-			// TODO(slack): notify the hunter their submission was rejected.
+			await notifyCaptureRejected(assignment.hunter_id, note ?? "");
 		}
 		return redirect(detail);
 	}

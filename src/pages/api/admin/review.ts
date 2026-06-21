@@ -1,6 +1,10 @@
 import type { APIRoute } from "astro";
 import { db } from "../../../lib/db";
 import { regenerateAiClues } from "../../../lib/ai";
+import {
+	notifyChangesRequested,
+	notifyOnboardingApproved,
+} from "../../../lib/notify";
 
 export const POST: APIRoute = async ({ request, redirect }) => {
 	const formData = await request.formData();
@@ -14,6 +18,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 			sql: `UPDATE users SET onboarding_status = 'approved', review_note = NULL WHERE slack_id = ?`,
 			args: [slack_id],
 		});
+		await notifyOnboardingApproved(slack_id);
 	} else if (action === "save_custom_clues") {
 		const ids = [...formData.keys()]
 			.filter((key) => /^custom_clue_\d+$/.test(key))
@@ -53,6 +58,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 			sql: `UPDATE users SET onboarding_status = 'changes_requested', review_note = ? WHERE slack_id = ?`,
 			args: [note ?? null, slack_id],
 		});
+		await notifyChangesRequested(slack_id, note ?? "");
 	}
 
 	return redirect("/admin");

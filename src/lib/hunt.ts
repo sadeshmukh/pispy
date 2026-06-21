@@ -1,10 +1,5 @@
 import { db } from "./db";
-
-import { App } from "slack.ts";
-
-const app = new App({
-	token: import.meta.env.XOXB,
-});
+import { notifyHuntStarted } from "./notify";
 
 // Scoring: a find starts from BASE_SCORE and loses points for how long the hunt
 // took. All clues are shown up front, so speed is the whole game — find your
@@ -139,13 +134,17 @@ export async function startAssignment(assignmentId: number): Promise<boolean> {
 		).rows[0],
 	)!;
 	if (!hunter || !target) return false;
-	await app.channel(hunter).send("goog");
-	await app.channel(target).send(":fear: :uuh: :fear:");
 
 	const res = await db.execute({
 		sql: `UPDATE assignments SET status = 'active', started_at = ?
           WHERE id = ? AND status = 'assigned'`,
 		args: [now, assignmentId],
 	});
+
+	// Only DM when this call actually started the hunt, so repeated start clicks
+	// or an admin force-start don't spam both players.
+	if (res.rowsAffected > 0) {
+		await notifyHuntStarted(hunter, target);
+	}
 	return res.rowsAffected > 0;
 }
