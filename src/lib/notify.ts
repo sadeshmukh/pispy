@@ -11,11 +11,13 @@ const app = new App({
 
 // Send a DM, but never let a Slack hiccup break the game flow that triggered it
 // - a failed notification must not roll back a score, status change, etc.
-async function dm(slackId: string, text: string): Promise<void> {
+async function dm(slackId: string, text: string): Promise<boolean> {
 	try {
 		await app.channel(slackId).send(text);
+		return true;
 	} catch (error) {
 		console.error(`Slack DM to ${slackId} failed:`, error);
+		return false;
 	}
 }
 
@@ -67,6 +69,13 @@ export async function notifyHuntStarted(
 	const targetName = await displayName(targetId);
 	await dm(hunterId, messages.huntStartedHunter(targetName));
 	await dm(targetId, messages.huntStartedTarget());
+}
+
+export async function notifyHuntScoreThreshold(
+	hunterId: string,
+	threshold: number,
+): Promise<boolean> {
+	return dm(hunterId, messages.huntScoreThreshold(threshold));
 }
 
 export async function notifyCaptureSubmitted(hunterId: string): Promise<void> {

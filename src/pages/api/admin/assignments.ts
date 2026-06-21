@@ -26,6 +26,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 		if (existing.rows[0]) {
 			const id = existing.rows[0].id as number;
 			await db.execute({
+				sql: "DELETE FROM hunt_threshold_notifications WHERE assignment_id = ?",
+				args: [id],
+			});
+			await db.execute({
 				sql: `UPDATE assignments SET target_id = ?, status = 'assigned', started_at = NULL WHERE id = ?`,
 				args: [target_id, id],
 			});
@@ -47,6 +51,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 	const detail = `/admin/assignment/${id}`;
 
 	if (action === "unassign") {
+		await db.execute({
+			sql: "DELETE FROM hunt_threshold_notifications WHERE assignment_id = ?",
+			args: [id],
+		});
 		await db.execute({
 			sql: "DELETE FROM assignments WHERE id = ?",
 			args: [id],

@@ -14,7 +14,7 @@
 export const messages = {
 	// A new item entered an admin review queue.
 	adminOnboardingSubmitted: (displayName: string, slackId: string) =>
-		`[ADMIN] :eyes: New onboarding submission from *${displayName}* (<@${slackId}>) is ready to review in pispy.`,
+		`[ADMIN] :eyes: New onboarding submlission from *${displayName}* (<@${slackId}>) is ready to review in pispy.`,
 	adminCaptureSubmitted: (
 		hunterName: string,
 		hunterId: string,
@@ -44,6 +44,15 @@ export const messages = {
 		`:dart: GAME START YO Your hunt is live. the target is *${targetName}*.  Go get 'em. ... fast`,
 	huntStartedTarget: () =>
 		":fear: Someone has been assigned to hunt *you* . You don't get to know who. . :eyes: don't get killed (/silly) (DO NOT HIDE IN THE BATHROOM)",
+	huntScoreThreshold: (points: number) => {
+		if (points === 100) {
+			return ":rotating_light: Only *100 points* remain. You have 100 seconds before this hunt is worth zero - go go go!";
+		}
+		if (points === 250) {
+			return ":warning: Your hunt is down to *250 points*. Time is disappearing fast - find your target!";
+		}
+		return `:alarm_clock: Your hunt is down to *${points} points*. Half your starting score is gone - move it!`;
+	},
 
 	// The hunter submitted a capture photo; it's waiting on admin review.
 	captureSubmittedHunter: () =>
