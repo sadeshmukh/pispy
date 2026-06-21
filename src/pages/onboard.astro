@@ -57,8 +57,18 @@ const { rows: customClues } = await db.execute({
         {session.avatar_url && <img src={session.avatar_url} alt="" class="h-12 w-12 rounded-full object-cover grayscale-[30%]" />}
         <span class="text-[1.1rem] text-[#ddd]">{session.display_name}</span>
       </header>
-      <b>we thank you for trusting us with your data ; we will not extort, sell, or use this maliciously. the data shall only kept until the end of sunday/demos and usage scope limited to this project</b>
-      <form id="onboard-form" action="/api/onboard" method="POST" enctype="multipart/form-data">
+      <section id="consent-gate" class="border border-[#5a4a1a] bg-[#1a170f] p-5">
+        <p class="mb-2 text-[0.7rem] text-[#c8ad5a]">Disclaimer</p>
+        <p class="mb-5 text-[0.9rem] leading-[1.6] text-[#d7c58a]">we thank you for trusting us with your data; we will not extort, sell, or use this maliciously. the data shall only be kept until the end of sunday/demos, and its usage is limited to this project.</p>
+        <i class="mb-5 text-[0.9rem] leading-[1.6] text-[#d7c58a]">we may sell it to palantir tho</i>
+        <label class="mb-5 flex cursor-pointer items-start gap-3 text-[0.85rem] leading-[1.5] text-[#d0bf7a]">
+          <input id="consent-checkbox" type="checkbox" class="mt-1 accent-[#c8ad5a]" />
+          <span>i understand and agree to continue</span>
+        </label>
+        <button id="consent-continue" type="button" disabled class="cursor-pointer border border-[#6a5a2a] bg-none px-6 py-[0.5rem] font-sans text-[0.85rem] text-[#e0cf97] transition-colors hover:border-[#b89c4a] hover:text-[#fff2c4] disabled:cursor-not-allowed disabled:border-[#3a3218] disabled:text-[#5d532f]">continue</button>
+      </section>
+
+      <form id="onboard-form" action="/api/onboard" method="POST" enctype="multipart/form-data" hidden>
         <div class="mb-7">
           <label class="mb-[0.4rem] block text-[0.7rem] uppercase tracking-[0.12em] text-[#666]">badge photo</label>
           <p class="mb-3 text-[0.8rem] text-[#555]">a photo of your badge</p>
@@ -176,6 +186,22 @@ const { rows: customClues } = await db.execute({
     </div>
 
     <script>
+      const consentGate = document.getElementById('consent-gate')!;
+      const consentCheckbox = document.getElementById('consent-checkbox') as HTMLInputElement;
+      const consentContinue = document.getElementById('consent-continue') as HTMLButtonElement;
+      const onboardForm = document.getElementById('onboard-form') as HTMLFormElement;
+
+      consentCheckbox.addEventListener('change', () => {
+        consentContinue.disabled = !consentCheckbox.checked;
+      });
+
+      consentContinue.addEventListener('click', () => {
+        if (!consentCheckbox.checked) return;
+        consentGate.hidden = true;
+        onboardForm.hidden = false;
+        onboardForm.querySelector<HTMLElement>('button:not([hidden]), input:not([hidden]):not([type="hidden"]), select, textarea')?.focus();
+      });
+
       function setupPhotoField(id: string) {
         const fileInput = document.getElementById(`${id}-file`) as HTMLInputElement;
         const fileFallback = document.getElementById(`${id}-file-fallback`) as HTMLInputElement;
