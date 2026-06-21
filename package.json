@@ -18,6 +18,7 @@
 		"@tailwindcss/vite": "^4.3.1",
 		"astro": "^6.4.7",
 		"openai": "^6.44.0",
+		"slack.ts": "^0.0.22",
 		"tailwindcss": "^4.3.1"
 	},
 	"devDependencies": {
