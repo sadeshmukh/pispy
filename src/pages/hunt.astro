@@ -5,9 +5,7 @@ import { db } from "../lib/db";
 import {
   getAssignmentForHunter,
   getTargetClues,
-  getReleasedFieldIds,
   computeScore,
-  CLUE_PENALTY,
 } from "../lib/hunt";
 
 const session = getSession(Astro.cookies);
@@ -25,18 +23,13 @@ if (status !== "approved") return Astro.redirect("/");
 
 const assignment = await getAssignmentForHunter(session.slack_id);
 
-const allClues = assignment ? await getTargetClues(assignment.target_id) : [];
-const released = assignment
-  ? await getReleasedFieldIds(assignment.id)
-  : new Set<number>();
-const revealedClues = allClues.filter((c) => released.has(c.id));
-const cluesLeft = allClues.length - revealedClues.length;
+const clues = assignment ? await getTargetClues(assignment.target_id) : [];
 
-// What a find would be worth if submitted right now.
+// What a find would be worth if submitted right now — drops purely with time.
 let potentialScore: number | null = null;
 if (assignment?.status === "active" && assignment.started_at) {
   const elapsed = Math.floor(Date.now() / 1000) - assignment.started_at;
-  potentialScore = computeScore(revealedClues.length, elapsed);
+  potentialScore = computeScore(elapsed);
 }
 ---
 
@@ -108,8 +101,8 @@ if (assignment?.status === "active" && assignment.started_at) {
             <header class="mb-8">
               <h1 class="mb-2 text-[1.2rem] font-semibold text-[#ddd]">Your target</h1>
               <p class="text-[0.9rem] leading-[1.5] text-[#888]">
-                Reveal clues to work out who it is. Each clue costs{" "}
-                {CLUE_PENALTY} points off your find.
+                Here's everything we know about them. Find them fast — your score
+                only drops with time.
               </p>
             </header>
 
@@ -120,11 +113,11 @@ if (assignment?.status === "active" && assignment.started_at) {
               </div>
             )}
 
-            {revealedClues.length === 0 ? (
-              <p class="text-[0.9rem] text-[#666]">No clues revealed yet.</p>
+            {clues.length === 0 ? (
+              <p class="text-[0.9rem] text-[#666]">No clues available for this target.</p>
             ) : (
               <div class="flex flex-col">
-                {revealedClues.map((c, i) => (
+                {clues.map((c, i) => (
                   <div class="flex items-baseline gap-4 border-t border-[#1a1a1a] py-4">
                     <span class="font-mono text-[0.7rem] text-[#666]">
                       {String(i + 1).padStart(2, "0")}
@@ -141,24 +134,10 @@ if (assignment?.status === "active" && assignment.started_at) {
               </div>
             )}
 
-            <div class="mt-6 flex justify-between gap-4 border-t border-[#1e1e1e] pt-4 text-[0.78rem] text-[#888]">
-              <span>
-                {revealedClues.length} of {allClues.length} clues revealed
-              </span>
-              {potentialScore !== null && (
+            {potentialScore !== null && (
+              <div class="mt-6 flex justify-end border-t border-[#1e1e1e] pt-4 text-[0.78rem] text-[#888]">
                 <span>worth ~{potentialScore} pts now</span>
-              )}
-            </div>
-
-            {cluesLeft > 0 && (
-              <form action="/api/hunt/reveal" method="POST" class="mt-5">
-                <button
-                  type="submit"
-                  class="cursor-pointer rounded border border-[#444] bg-none px-6 py-[0.55rem] text-[0.9rem] text-[#ccc] transition-colors hover:border-[#888] hover:text-white"
-                >
-                  Reveal a clue ({cluesLeft} left)
-                </button>
-              </form>
+              </div>
             )}
 
             <div class="mt-10 border-t border-[#1e1e1e] pt-6">

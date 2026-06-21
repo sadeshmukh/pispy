@@ -6,13 +6,12 @@ const { rows: approved } = await db.execute(
   `SELECT slack_id, display_name FROM users WHERE onboarding_status = 'approved' ORDER BY display_name`
 );
 
-// Assignments joined with hunter/target names and a released-clue count.
+// Assignments joined with hunter/target names and how many clues the target has.
 const { rows: assignments } = await db.execute(`
   SELECT
     a.id, a.status, a.started_at,
     h.display_name AS hunter_name,
     t.display_name AS target_name,
-    (SELECT COUNT(*) FROM clue_releases cr WHERE cr.assignment_id = a.id) AS released,
     ((SELECT COUNT(*) FROM user_clues uc WHERE uc.slack_id = a.target_id) +
      (SELECT COUNT(*) FROM custom_clues cc WHERE cc.slack_id = a.target_id)) AS total
   FROM assignments a
@@ -55,7 +54,7 @@ const statusClass: Record<string, string> = {
       </nav>
 
       <h1 class="mb-[0.4rem] text-[1.05rem] font-semibold text-[#ddd]">assignments</h1>
-      <p class="mb-7 text-[0.82rem] text-[#888]">Assign each hunter a target. Hunters reveal clues and submit a photo when they find them.</p>
+      <p class="mb-7 text-[0.82rem] text-[#888]">Assign each hunter a target. Hunters see all the target's clues and submit a photo when they find them.</p>
 
       {assignments.length === 0 ? (
         <p class="text-[0.9rem] text-[#666]">no assignments yet</p>
@@ -70,7 +69,7 @@ const statusClass: Record<string, string> = {
                 <td>{a.hunter_name as string}</td>
                 <td>{a.target_name as string}</td>
                 <td class={statusClass[a.status as string] ?? ''}>{statusLabel[a.status as string] ?? a.status as string}</td>
-                <td class="font-mono !text-[0.75rem] text-[#777]">{a.released as number}/{a.total as number}</td>
+                <td class="font-mono !text-[0.75rem] text-[#777]">{a.total as number}</td>
                 <td class="flex items-center gap-5">
                   <a href={`/admin/assignment/${a.id}`} class="text-[#999] no-underline hover:text-[#ccc]">manage →</a>
                   <form action="/api/admin/assignments" method="POST">

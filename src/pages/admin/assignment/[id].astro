@@ -4,7 +4,6 @@ import { db } from '../../../lib/db';
 import {
   getAssignment,
   getTargetClues,
-  getReleasedFieldIds,
 } from '../../../lib/hunt';
 
 const id = parseInt(Astro.params.id!);
@@ -21,7 +20,6 @@ const hunterName = names[0]?.hunter_name as string;
 const targetName = names[0]?.target_name as string;
 
 const clues = await getTargetClues(assignment.target_id);
-const released = await getReleasedFieldIds(assignment.id);
 
 const startedLabel = assignment.started_at
   ? new Date(assignment.started_at * 1000).toLocaleString()
@@ -59,7 +57,7 @@ const statusClass: Record<string, string> = {
         <p class="text-[0.8rem] text-[#888]">
           status: <span class={statusClass[assignment.status] ?? ''}>{assignment.status}</span>
           {startedLabel && <> · started {startedLabel}</>}
-          · {released.size}/{clues.length} clues revealed
+          · {clues.length} clues
           {assignment.score !== null && <> · {assignment.score} pts</>}
         </p>
       </header>
@@ -126,52 +124,20 @@ const statusClass: Record<string, string> = {
         </form>
       )}
 
-      <div class="mb-8 flex gap-6 border-b border-[#1e1e1e] pb-5">
-        <form action="/api/admin/assignments" method="POST">
-          <input type="hidden" name="action" value="reveal_next" />
-          <input type="hidden" name="id" value={assignment.id} />
-          <button type="submit" class="cursor-pointer border-none bg-none p-0 font-sans text-[0.82rem] text-[#999] hover:text-[#ccc]">reveal next</button>
-        </form>
-        <form action="/api/admin/assignments" method="POST">
-          <input type="hidden" name="action" value="reveal_all" />
-          <input type="hidden" name="id" value={assignment.id} />
-          <button type="submit" class="cursor-pointer border-none bg-none p-0 font-sans text-[0.82rem] text-[#999] hover:text-[#ccc]">reveal all</button>
-        </form>
-        <form action="/api/admin/assignments" method="POST">
-          <input type="hidden" name="action" value="reset_clues" />
-          <input type="hidden" name="id" value={assignment.id} />
-          <button type="submit" class="cursor-pointer border-none bg-none p-0 font-sans text-[0.82rem] text-[#aa6a6a] hover:text-[#ca8a8a]">reset clues</button>
-        </form>
-      </div>
-
-      <p class="mb-4 text-[0.65rem] uppercase tracking-[0.1em] text-[#777]">clues</p>
+      <p class="mb-4 text-[0.65rem] uppercase tracking-[0.1em] text-[#777]">clues the hunter sees</p>
       {clues.length === 0 ? (
-        <p class="text-[0.9rem] text-[#666]">the target hasn't answered any clue fields yet.</p>
+        <p class="text-[0.9rem] text-[#666]">the target has no clues yet.</p>
       ) : (
         <div class="flex flex-col">
-          {clues.map(c => {
-            const isReleased = released.has(c.id);
-            return (
-              <div class="flex items-center gap-[0.85rem] border-t border-[#1a1a1a] py-[0.85rem]">
-                <span class={`h-[7px] w-[7px] flex-none rounded-full ${isReleased ? 'bg-[#6a9a6a]' : 'bg-[#333]'}`} />
-                <div class="flex-1">
-                  <span class="mb-1 block text-[0.72rem] text-[#888]">{c.prompt}</span>
-                  <span class="mr-2 text-[0.62rem] uppercase text-[#555]">{c.difficulty}</span>
-                  <span class={`block text-[0.9rem] ${isReleased ? 'text-[#ccc]' : 'text-[#666]'}`}>{c.answer}</span>
-                </div>
-                <div class="flex items-center gap-3">
-                  <form action="/api/admin/assignments" method="POST">
-                    <input type="hidden" name="action" value={isReleased ? 'revoke_clue' : 'release_clue'} />
-                    <input type="hidden" name="id" value={assignment.id} />
-                    <input type="hidden" name="field_id" value={c.id} />
-                    <button type="submit" class={`cursor-pointer border-none bg-none p-0 font-sans text-[0.82rem] ${isReleased ? 'text-[#aa6a6a] hover:text-[#ca8a8a]' : 'text-[#999] hover:text-[#ccc]'}`}>
-                      {isReleased ? 'revoke' : 'release'}
-                    </button>
-                  </form>
-                </div>
+          {clues.map(c => (
+            <div class="flex items-center gap-[0.85rem] border-t border-[#1a1a1a] py-[0.85rem]">
+              <div class="flex-1">
+                <span class="mb-1 block text-[0.72rem] text-[#888]">{c.prompt}</span>
+                <span class="mr-2 text-[0.62rem] uppercase text-[#555]">{c.difficulty}</span>
+                <span class="block text-[0.9rem] text-[#ccc]">{c.answer}</span>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>

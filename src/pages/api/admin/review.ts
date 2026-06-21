@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
+import { regenerateAiClues } from '../../../lib/ai';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const formData = await request.formData();
@@ -25,6 +26,15 @@ export const POST: APIRoute = async ({ request, redirect }) => {
       const difficulty = ['hard', 'medium', 'easy'].includes(rawDifficulty) ? rawDifficulty : 'medium';
       if (clue) await db.execute({ sql: 'UPDATE custom_clues SET clue = ?, difficulty = ? WHERE id = ? AND slack_id = ?', args: [clue, difficulty, id, slack_id] });
     }
+    return redirect(`/admin/review/${slack_id}`);
+  } else if (action === 'regenerate_clues') {
+    const { rows } = await db.execute({
+      sql: 'SELECT display_name, about_text FROM users WHERE slack_id = ?',
+      args: [slack_id],
+    });
+    const aboutText = (rows[0]?.about_text as string | null) ?? '';
+    const displayName = (rows[0]?.display_name as string | null) ?? '';
+    await regenerateAiClues(db, slack_id, aboutText, displayName);
     return redirect(`/admin/review/${slack_id}`);
   } else if (action === 'request_changes') {
     const note = (formData.get('note') as string)?.trim();

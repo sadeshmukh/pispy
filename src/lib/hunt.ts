@@ -6,10 +6,10 @@ const app = new App({
   token: import.meta.env.XOXB,
 });
 
-// Scoring: a find starts from BASE_SCORE and loses points for every clue the
-// hunter revealed and for how long the hunt took. Earlier + fewer clues wins.
+// Scoring: a find starts from BASE_SCORE and loses points for how long the hunt
+// took. All clues are shown up front, so speed is the whole game — find your
+// target fastest to win.
 export const BASE_SCORE = 1000;
-export const CLUE_PENALTY = 100; // points lost per clue revealed
 export const TIME_PENALTY_PER_HOUR = 50; // points lost per hour since the hunt started
 export const MIN_SCORE = 100; // a successful find always earns at least this
 
@@ -71,7 +71,8 @@ export async function getAssignmentForHunter(
   return rowToAssignment(rows[0]);
 }
 
-// The target's answered clues, in the order they should be revealed.
+// The target's clues (standard answers + custom/AI), ordered by difficulty.
+// All of these are shown to the hunter at once.
 export async function getTargetClues(target_id: string): Promise<Clue[]> {
   const [{ rows: standard }, { rows: custom }] = await Promise.all([
     db.execute({
@@ -92,51 +93,18 @@ export async function getTargetClues(target_id: string): Promise<Clue[]> {
     .map(({ order: _order, ...clue }) => clue);
 }
 
-export async function getReleasedFieldIds(
-  assignmentId: number,
-): Promise<Set<number>> {
-  const { rows } = await db.execute({
-    sql: "SELECT field_id FROM clue_releases WHERE assignment_id = ?",
-    args: [assignmentId],
-  });
-  return new Set(rows.map((r) => r.field_id as number));
-}
-
-// The score a find would earn right now given how many clues the hunter has
-// revealed and how long the hunt has been running.
-export function computeScore(
-  cluesRevealed: number,
-  elapsedSeconds: number,
-): number {
+// The score a find would earn right now given how long the hunt has been
+// running. All clues are visible from the start, so only elapsed time matters.
+export function computeScore(elapsedSeconds: number): number {
   const timePenalty = Math.floor(
     (Math.max(0, elapsedSeconds) / 3600) * TIME_PENALTY_PER_HOUR,
   );
-  const raw = BASE_SCORE - CLUE_PENALTY * cluesRevealed - timePenalty;
-  return Math.max(MIN_SCORE, raw);
+  return Math.max(MIN_SCORE, BASE_SCORE - timePenalty);
 }
 
-// Reveal the next clue (lowest reveal-order) the hunter hasn't seen yet.
-// Returns the revealed field id, or null if there's nothing left to reveal.
-export async function revealNextClue(
-  assignment: Assignment,
-): Promise<number | null> {
-  if (assignment.status !== "active") return null;
-  const clues = await getTargetClues(assignment.target_id);
-  const released = await getReleasedFieldIds(assignment.id);
-  const next = clues.find((c) => !released.has(c.id));
-  if (!next) return null;
-  await db.execute({
-    sql: `INSERT INTO clue_releases (assignment_id, field_id) VALUES (?, ?)
-          ON CONFLICT (assignment_id, field_id) DO NOTHING`,
-    args: [assignment.id, next.id],
-  });
-  return next.id;
-}
-
-// Transition an 'assigned' hunt into 'active': stamp the start time. Clues are
-// no longer handed out automatically — the hunter reveals them at their own
-// pace. Safe to call from either the hunter or an admin force-start. No-op if
-// the hunt is not in the 'assigned' state.
+// Transition an 'assigned' hunt into 'active': stamp the start time. The hunter
+// sees every clue at once from here. Safe to call from either the hunter or an
+// admin force-start. No-op if the hunt is not in the 'assigned' state.
 export async function startAssignment(assignmentId: number): Promise<boolean> {
   const now = Math.floor(Date.now() / 1000);
   const { hunter_id: hunter, target_id: target } = rowToAssignment(

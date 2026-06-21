@@ -5,12 +5,13 @@ import { db } from '../../../lib/db';
 const { slack_id } = Astro.params;
 
 const { rows } = await db.execute({
-  sql: 'SELECT display_name, avatar_url, onboarding_status FROM users WHERE slack_id = ?',
+  sql: 'SELECT display_name, avatar_url, onboarding_status, about_text FROM users WHERE slack_id = ?',
   args: [slack_id!],
 });
 if (!rows[0]) return Astro.redirect('/admin');
 
 const user = rows[0];
+const aboutText = (user.about_text as string | null)?.trim();
 
 const { rows: clues } = await db.execute({
   sql: `SELECT cf.prompt, uc.answer, cf.difficulty, cf.question_type
@@ -21,9 +22,11 @@ const { rows: clues } = await db.execute({
   args: [slack_id!],
 });
 const { rows: customClues } = await db.execute({
-  sql: 'SELECT id, clue, difficulty FROM custom_clues WHERE slack_id = ? ORDER BY id',
+  sql: 'SELECT id, clue, difficulty, source FROM custom_clues WHERE slack_id = ? ORDER BY source DESC, id',
   args: [slack_id!],
 });
+const aiClues = customClues.filter(c => c.source === 'ai');
+const userClues = customClues.filter(c => c.source !== 'ai');
 ---
 
 <!doctype html>
@@ -75,13 +78,51 @@ const { rows: customClues } = await db.execute({
         </div>
       )}
 
-      {customClues.length > 0 && (
+      {aboutText && (
         <div class="mb-8">
-          <p class="mb-3 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">custom clues — editable before approval</p>
+          <p class="mb-2 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">what they wrote about themselves</p>
+          <p class="whitespace-pre-wrap border-l-2 border-[#2a2a2a] bg-[#141414] px-4 py-3 text-[0.85rem] leading-[1.55] text-[#aaa]">{aboutText}</p>
+        </div>
+      )}
+
+      {(aiClues.length > 0 || aboutText) && (
+        <div class="mb-8">
+          <div class="mb-3 flex items-center justify-between gap-4">
+            <p class="text-[0.65rem] uppercase tracking-[0.1em] text-[#6a7a8a]">AI-generated clues — sign off before approving</p>
+            <form action="/api/admin/review" method="POST">
+              <input type="hidden" name="slack_id" value={slack_id} />
+              <input type="hidden" name="action" value="regenerate_clues" />
+              <button type="submit" class="cursor-pointer border border-[#2a3a4a] bg-none px-3 py-[0.35rem] font-sans text-[0.75rem] text-[#6a8aaa] transition-colors hover:border-[#4a6a8a] hover:text-[#8aaaca]">regenerate from description</button>
+            </form>
+          </div>
+          {aiClues.length === 0 ? (
+            <p class="text-[0.82rem] text-[#666]">No AI clues yet — regenerate to create some from the description above.</p>
+          ) : (
+            <form action="/api/admin/review" method="POST" class="flex flex-col items-start gap-[0.65rem]">
+              <input type="hidden" name="slack_id" value={slack_id} />
+              <input type="hidden" name="action" value="save_custom_clues" />
+              {aiClues.map(c => (
+                <div class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-[0.6rem]">
+                  <input type="text" name={`custom_clue_${c.id}`} value={c.clue as string} required class="border border-[#2a3340] bg-[#141a20] px-[0.65rem] py-2 font-sans text-base text-[#ccc] outline-none" />
+                  <select name={`custom_difficulty_${c.id}`} class="border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-base text-[#ccc] outline-none">
+                    {['hard', 'medium', 'easy'].map(level => <option value={level} selected={c.difficulty === level}>{level}</option>)}
+                  </select>
+                  <label class="text-[0.75rem] text-[#755]"><input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
+                </div>
+              ))}
+              <button type="submit" class="cursor-pointer border border-[#333] bg-none px-4 py-2 font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#bbb]">save AI clues</button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {userClues.length > 0 && (
+        <div class="mb-8">
+          <p class="mb-3 text-[0.65rem] uppercase tracking-[0.1em] text-[#444]">their own clues — editable before approval</p>
           <form action="/api/admin/review" method="POST" class="flex flex-col items-start gap-[0.65rem]">
             <input type="hidden" name="slack_id" value={slack_id} />
             <input type="hidden" name="action" value="save_custom_clues" />
-            {customClues.map(c => (
+            {userClues.map(c => (
               <div class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-[0.6rem]">
                 <input type="text" name={`custom_clue_${c.id}`} value={c.clue as string} required class="border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-base text-[#ccc] outline-none" />
                 <select name={`custom_difficulty_${c.id}`} class="border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-base text-[#ccc] outline-none">
@@ -90,7 +131,7 @@ const { rows: customClues } = await db.execute({
                 <label class="text-[0.75rem] text-[#755]"><input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
               </div>
             ))}
-            <button type="submit" class="cursor-pointer border border-[#333] bg-none px-4 py-2 font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#bbb]">save custom clues</button>
+            <button type="submit" class="cursor-pointer border border-[#333] bg-none px-4 py-2 font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#bbb]">save their clues</button>
           </form>
         </div>
       )}

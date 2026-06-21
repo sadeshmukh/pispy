@@ -2,7 +2,7 @@ import { createClient } from '@libsql/client';
 
 // Bump this whenever initDb gains a migration. Middleware uses it to rerun
 // initialization after a hot reload instead of keeping a stale "ready" flag.
-export const DB_SCHEMA_VERSION = 3;
+export const DB_SCHEMA_VERSION = 4;
 
 export const db = createClient({
   url: import.meta.env.TURSO_URL,
@@ -21,6 +21,7 @@ export async function initDb() {
       badge_photo_mime TEXT,
       face_photo BLOB,
       face_photo_mime TEXT,
+      about_text TEXT,
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
     CREATE TABLE IF NOT EXISTS clue_fields (
@@ -62,6 +63,7 @@ export async function initDb() {
       slack_id TEXT NOT NULL,
       clue TEXT NOT NULL,
       difficulty TEXT NOT NULL DEFAULT 'medium',
+      source TEXT NOT NULL DEFAULT 'user',
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
   `);
@@ -78,6 +80,8 @@ export async function initDb() {
     `ALTER TABLE clue_fields ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'medium'`,
     `ALTER TABLE clue_fields ADD COLUMN question_type TEXT NOT NULL DEFAULT 'text'`,
     `ALTER TABLE clue_fields ADD COLUMN placeholder TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE users ADD COLUMN about_text TEXT`,
+    `ALTER TABLE custom_clues ADD COLUMN source TEXT NOT NULL DEFAULT 'user'`,
   ];
   for (const sql of migrations) {
     try {

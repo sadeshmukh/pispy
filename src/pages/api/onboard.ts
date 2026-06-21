@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../lib/db';
 import { getSession } from '../../lib/auth';
 import { parsePhoto } from '../../lib/photos';
+import { regenerateAiClues } from '../../lib/ai';
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const session = getSession(cookies);
@@ -50,6 +51,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect('/onboard?error=missing_photos');
   }
 
+  const aboutText = (formData.get('about_text') as string)?.trim() ?? '';
+
   await db.execute({
     sql: `UPDATE users SET
             onboarding_status = 'pending_review',
@@ -57,9 +60,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
             badge_photo = ?,
             badge_photo_mime = ?,
             face_photo = ?,
-            face_photo_mime = ?
+            face_photo_mime = ?,
+            about_text = ?
           WHERE slack_id = ?`,
-    args: [badgeBlob, badgeMime, faceBlob, faceMime, session.slack_id],
+    args: [badgeBlob, badgeMime, faceBlob, faceMime, aboutText || null, session.slack_id],
   });
 
   // Upsert standard clue answers. Yes/no questions store a useful, readable
@@ -85,8 +89,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     }
   }
 
-  // Replacing the user's optional list makes removals and reordering explicit.
-  await db.execute({ sql: 'DELETE FROM custom_clues WHERE slack_id = ?', args: [session.slack_id] });
+  // Replace only the user's own clues — AI-generated ones (source = 'ai') are
+  // managed separately below. Re-inserting makes removals and reordering explicit.
+  await db.execute({ sql: "DELETE FROM custom_clues WHERE slack_id = ? AND source = 'user'", args: [session.slack_id] });
   const customKeys = [...formData.keys()].filter(k => /^custom_clue_\d+$/.test(k));
   for (const key of customKeys) {
     const index = key.slice('custom_clue_'.length);
@@ -94,8 +99,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     if (!clue) continue;
     const rawDifficulty = String(formData.get(`custom_difficulty_${index}`));
     const difficulty = ['hard', 'medium', 'easy'].includes(rawDifficulty) ? rawDifficulty : 'medium';
-    await db.execute({ sql: 'INSERT INTO custom_clues (slack_id, clue, difficulty) VALUES (?, ?, ?)', args: [session.slack_id, clue, difficulty] });
+    await db.execute({ sql: "INSERT INTO custom_clues (slack_id, clue, difficulty, source) VALUES (?, ?, ?, 'user')", args: [session.slack_id, clue, difficulty] });
   }
+
+  // Turn the free-form description into clues for an admin to review. Fail-soft:
+  // if the AI call fails, onboarding still completes and an admin can regenerate.
+  await regenerateAiClues(db, session.slack_id, aboutText, session.display_name);
 
   return redirect('/');
 };

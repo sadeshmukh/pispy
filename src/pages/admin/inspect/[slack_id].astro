@@ -20,7 +20,7 @@ const { rows: fields } = await db.execute({
   args: [slack_id!],
 });
 const { rows: customClues } = await db.execute({
-  sql: 'SELECT id, clue, difficulty FROM custom_clues WHERE slack_id = ? ORDER BY id',
+  sql: "SELECT id, clue, difficulty, source FROM custom_clues WHERE slack_id = ? ORDER BY source DESC, id",
   args: [slack_id!],
 });
 
@@ -89,7 +89,7 @@ const currentStatus = user.onboarding_status as string;
               <div class="grid w-full grid-cols-[1fr_auto_auto] items-center gap-[0.6rem]">
                 <input type="text" name={`custom_clue_${c.id}`} value={c.clue as string} class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]" />
                 <select name={`custom_difficulty_${c.id}`} class="w-full border border-[#2a2a2a] bg-[#161616] px-[0.65rem] py-2 font-sans text-[0.9rem] text-[#ccc] outline-none transition-colors focus:border-[#555]">{['hard', 'medium', 'easy'].map(level => <option value={level} selected={c.difficulty === level}>{level}</option>)}</select>
-                <label class="text-[0.75rem] text-[#755]"><input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
+                <label class="text-[0.75rem] text-[#755]">{c.source === 'ai' && <span class="mr-2 text-[0.6rem] uppercase tracking-[0.06em] text-[#6a7a8a]">ai</span>}<input type="checkbox" name={`delete_custom_${c.id}`} /> remove</label>
               </div>
             ))}
             <button type="submit" class="cursor-pointer border border-[#333] bg-none px-5 py-[0.45rem] font-sans text-[0.85rem] text-[#888] transition-colors hover:border-[#555] hover:text-[#ccc]">save custom clues</button>

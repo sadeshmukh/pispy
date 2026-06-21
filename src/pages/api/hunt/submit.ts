@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 import { getSession } from '../../../lib/auth';
 import { parsePhoto } from '../../../lib/photos';
-import { getAssignmentForHunter, getReleasedFieldIds, computeScore } from '../../../lib/hunt';
+import { getAssignmentForHunter, computeScore } from '../../../lib/hunt';
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const session = getSession(cookies);
@@ -35,14 +35,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   if (!blob) return redirect('/hunt?error=missing_photo');
 
-  // Lock in the score at submission time: it reflects how many clues were
-  // revealed and how long the hunt ran. Points are awarded once an admin
-  // confirms the photo really is the target.
-  const released = await getReleasedFieldIds(assignment.id);
+  // Lock in the score at submission time: it reflects how long the hunt ran.
+  // Points are awarded once an admin confirms the photo really is the target.
   const elapsed = assignment.started_at
     ? Math.floor(Date.now() / 1000) - assignment.started_at
     : 0;
-  const score = computeScore(released.size, elapsed);
+  const score = computeScore(elapsed);
 
   await db.execute({
     sql: `UPDATE assignments SET
