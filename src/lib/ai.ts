@@ -24,7 +24,7 @@ Rules:
 - Each clue must be one short, factual statement (appearance, where they're from, habits, where they hang out, hobbies, distinctive items, vibe).
 - Treat the profile facts as true. Location is a strong clue - include it when present.
 - Prefer specific, observable things over vague personality traits.
-- Do not invent details that are not supported by the inputs. Ignore anything that wouldn't help recognize someone in person.
+- Do not invent details that are not supported by the inputs. Restate or lightly rephrase the given facts as clues - never fabricate a specific scenario, item, or appearance detail to illustrate a fact. For example, if a fact says they like Svelte, the clue should be "likes Svelte" (or similar), not "has a Svelte shirt" or "was seen coding in Svelte" - those details were never stated. Ignore anything that wouldn't help recognize someone in person.
 - Rate each clue's difficulty for narrowing down who it is: "easy" = very identifying, "medium" = somewhat, "hard" = barely narrows it down.
 - Return 3 to 7 clues. If the inputs are thin, return as many good clues as you can.
 - Respond ONLY with JSON of the form {"clues":[{"clue":"...","difficulty":"easy|medium|hard"}]}.`;
