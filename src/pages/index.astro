@@ -29,7 +29,7 @@ if (session) {
 		if (assignment?.status === "assigned") {
 			huntNotice = {
 				eyebrow: "target assigned",
-				message: "You have someone to hunt. Start when you're ready.",
+				message: "target allocated. clicky to see who it is ",
 				action: "Go to your hunt",
 				urgent: true,
 			};
@@ -43,14 +43,14 @@ if (session) {
 		} else if (assignment?.status === "active") {
 			huntNotice = {
 				eyebrow: "hunt in progress",
-				message: "Your target is still out there.",
+				message: "they're still out there. find them or get fired",
 				action: "Open your hunt",
 				urgent: true,
 			};
 		} else if (assignment?.status === "submitted") {
 			huntNotice = {
 				eyebrow: "photo under review",
-				message: "Your capture is waiting for an admin to confirm it.",
+				message: "your boss will review if it is good or we need to fire you.",
 				action: "View submission",
 				urgent: false,
 			};

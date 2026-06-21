@@ -47,7 +47,7 @@ export const messages = {
 
 	// The hunter submitted a capture photo; it's waiting on admin review.
 	captureSubmittedHunter: () =>
-		":hourglass_flowing_sand: Capture submitted! we'll check it and if its approved, you win and get points!!",
+		":eyes: Capture submitted! :bangbang: we'll check it and if its approved, you win and get points!!",
 
 	// Capture confirmed - the find counts and the score is locked in. The hunter
 	// gets the win; the target finds out they've been caught and by whom.
