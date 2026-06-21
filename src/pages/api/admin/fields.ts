@@ -27,6 +27,34 @@ export const POST: APIRoute = async ({ request, redirect }) => {
       sql: 'UPDATE clue_fields SET prompt = ?, field_order = ?, difficulty = ?, question_type = ? WHERE id = ?',
       args: [prompt, fieldOrder, difficulty, questionType, id],
     });
+  } else if (action === 'update_all') {
+    const ids = formData.getAll('id')
+      .map(value => parseInt(String(value)))
+      .filter(id => Number.isInteger(id) && id > 0);
+    const deleteIds = new Set(
+      formData.getAll('delete')
+        .map(value => parseInt(String(value)))
+        .filter(id => ids.includes(id))
+    );
+
+    for (const id of ids) {
+      if (deleteIds.has(id)) {
+        await db.execute({ sql: 'DELETE FROM user_clues WHERE field_id = ?', args: [id] });
+        await db.execute({ sql: 'DELETE FROM clue_fields WHERE id = ?', args: [id] });
+        continue;
+      }
+
+      const prompt = String(formData.get(`prompt_${id}`) ?? '').trim();
+      if (!prompt) continue;
+      const fieldOrder = parseInt(String(formData.get(`field_order_${id}`))) || 0;
+      const difficulty = normalizeDifficulty(formData.get(`difficulty_${id}`));
+      const questionType = normalizeQuestionType(formData.get(`question_type_${id}`));
+      const placeholder = String(formData.get(`placeholder_${id}`) ?? '').trim();
+      await db.execute({
+        sql: 'UPDATE clue_fields SET prompt = ?, field_order = ?, difficulty = ?, question_type = ?, placeholder = ? WHERE id = ?',
+        args: [prompt, fieldOrder, difficulty, questionType, placeholder, id],
+      });
+    }
   } else if (action === 'delete') {
     const id = parseInt(formData.get('id') as string);
     if (!id) return redirect('/admin/fields');
